@@ -452,9 +452,9 @@ function billingOnExercice(year, clientFilter) {
     const s=parseDate(inv.start), e=parseDate(inv.end);
     const oS=s<yS?yS:s, oE=e>yE?yE:e;
     if (oS>=oE) continue;
-    const oDays=daysBetween(oS,oE), tDays=daysBetween(s,e);
-    if (tDays<=0) continue;
-    total += inv.qty * inv.price * oDays / tDays;
+    const oDays=daysBetween(oS,oE);
+    // Prorata : prix annuel × licences × jours dans l'année / 365
+    total += inv.qty * inv.price * oDays / 365;
   }
   return total;
 }
