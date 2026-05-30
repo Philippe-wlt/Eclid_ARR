@@ -315,14 +315,13 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     </div>
     <div class="settings-col" style="grid-column:1/-1;">
       <h3>Étapes de la relation</h3>
-      <p class="section-subtitle" style="margin-top:4px;">Le taux de réussite pondère les projections ARR et CA dans le pipe.</p>
+      <p class="section-subtitle" style="margin-top:4px;">Le taux de réussite pondère les projections ARR et CA. Utilisez ↑ ↓ pour réordonner.</p>
       <div class="form-card">
         <div class="type-list" id="etapes-list"></div>
         <div class="add-type-row">
           <input type="text" id="new-etape-input" placeholder="Nom de l'étape" style="flex:2;min-width:140px;">
           <input type="number" id="new-etape-taux" placeholder="Taux %" min="0" max="100" style="width:80px;">
-          <input type="number" id="new-etape-ordre" placeholder="Ordre" min="1" style="width:70px;">
-          <button class="btn btn-primary" onclick="addEtape()">Ajouter</button>
+          <button class="btn btn-primary" onclick="addEtape()">Ajouter en fin de liste</button>
         </div>
         <span id="etape-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
       </div>
@@ -731,11 +730,15 @@ function renderSettings(){
   ll.innerHTML=lieuxRencontre.length?lieuxRencontre.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeLieu('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun lieu.</div>';
   // Etapes
   const el=document.getElementById('etapes-list');
-  el.innerHTML=etapesRelation.length?etapesRelation.map(e=>`
+  el.innerHTML=etapesRelation.length?etapesRelation.map((e,idx)=>`
     <div class="type-item">
-      <span style="display:flex;align-items:center;gap:10px;">
+      <span style="display:flex;align-items:center;gap:10px;flex:1;">
+        <span style="display:flex;flex-direction:column;gap:2px;">
+          <button class="btn btn-secondary btn-sm" style="padding:1px 7px;font-size:11px;line-height:1.4;" ${idx===0?'disabled':''} onclick="moveEtape(${idx},-1)">↑</button>
+          <button class="btn btn-secondary btn-sm" style="padding:1px 7px;font-size:11px;line-height:1.4;" ${idx===etapesRelation.length-1?'disabled':''} onclick="moveEtape(${idx},+1)">↓</button>
+        </span>
+        <span style="font-size:11px;color:var(--muted);min-width:20px;text-align:center;font-weight:600;">${idx+1}</span>
         <strong style="min-width:150px;">${esc(e.name)}</strong>
-        <span style="font-size:12px;color:var(--muted);">Ordre ${e.ordre}</span>
         <label style="display:flex;align-items:center;gap:5px;font-size:12px;">
           Taux : <input type="number" class="taux-input" value="${e.taux_reussite}" min="0" max="100"
             onchange="updateEtapeTaux('${esc(e.name)}',this.value)">%
@@ -829,19 +832,21 @@ async function saveProspect(){
 
   if(!nom||!prenom||!email||!tel||!poste||!societe||!lieu||!etape){err.textContent='Veuillez remplir tous les champs obligatoires.';return;}
   err.textContent='';
+  // Capturer l'ID AVANT closeModal qui le remet à null
+  const pid=prospectEditId;
   closeModal('modal-prospect');
   showLoader('Enregistrement…');
   try{
     const body={nom,prenom,email,telephone:tel,poste,societe,effectif,type_entreprise:type_entreprise||null,lieu_rencontre:lieu,etape,potentiel_licences:licences,potentiel_arr:arr,closing_date:closing,ferme_perdu:ferme};
-    let pid=prospectEditId;
+    let finalPid=pid;
     if(pid){
       await sbPatch('prospects',`id=eq.${pid}`,body);
       await sbDelete('prospect_problematiques',`prospect_id=eq.${pid}`);
     } else {
       const res=await sbPost('prospects',body);
-      pid=res[0].id;
+      finalPid=res[0].id;
     }
-    if(selPbs.length)await sbPost('prospect_problematiques',selPbs.map(pb=>({prospect_id:pid,problematique:pb})));
+    if(selPbs.length)await sbPost('prospect_problematiques',selPbs.map(pb=>({prospect_id:finalPid,problematique:pb})));
     await loadAll();
   }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
 }
@@ -853,9 +858,10 @@ function askDeleteProspect(id){
   document.getElementById('modal-delete-prospect').classList.add('open');
 }
 async function confirmDeleteProspect(){
+  const id=deleteProspectTarget;
   closeModal('modal-delete-prospect');
   showLoader('Suppression…');
-  try{await sbDelete('prospects',`id=eq.${deleteProspectTarget}`);await loadAll();}
+  try{await sbDelete('prospects',`id=eq.${id}`);await loadAll();}
   catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
 }
 
@@ -905,7 +911,13 @@ async function confirmEdit(){
   }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
 }
 function askDelete(num){deleteTarget=num;const inv=invoices.find(i=>i.num===num);document.getElementById('modal-delete-msg').textContent=`Supprimer la facture ${num} (${inv.client}) ?`;document.getElementById('modal-delete').classList.add('open');}
-async function confirmDelete(){closeModal('modal-delete');showLoader('Suppression…');try{await sbDelete('invoices',`num=eq.${encodeURIComponent(deleteTarget)}`);await loadAll();}catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}}
+async function confirmDelete(){
+  const num=deleteTarget;
+  closeModal('modal-delete');
+  showLoader('Suppression…');
+  try{await sbDelete('invoices',`num=eq.${encodeURIComponent(num)}`);await loadAll();}
+  catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
 
 // SETTINGS CRUD
 async function addClientType(){const v=document.getElementById('new-type-input').value.trim(),err=document.getElementById('type-error');if(!v){err.textContent='Saisissez un nom.';return;}if(clientTypes.find(t=>t.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('client_types',{name:v});document.getElementById('new-type-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
@@ -919,14 +931,35 @@ async function removeLieu(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader
 async function addEtape(){
   const n=document.getElementById('new-etape-input').value.trim();
   const t=parseInt(document.getElementById('new-etape-taux').value)||50;
-  const o=parseInt(document.getElementById('new-etape-ordre').value)||etapesRelation.length+1;
   const err=document.getElementById('etape-error');
   if(!n){err.textContent='Saisissez un nom.';return;}
   if(etapesRelation.find(e=>e.name.toLowerCase()===n.toLowerCase())){err.textContent='Existe déjà.';return;}
+  // Ajoute en fin de liste : ordre = max existant + 1
+  const newOrdre=etapesRelation.length>0?Math.max(...etapesRelation.map(e=>e.ordre))+1:1;
   err.textContent='';showLoader('…');
-  try{await sbPost('etapes_relation',{name:n,taux_reussite:t,ordre:o});['new-etape-input','new-etape-taux','new-etape-ordre'].forEach(id=>document.getElementById(id).value='');await loadAll();}
-  catch(e){alert(e.message);hideLoader();}
+  try{
+    await sbPost('etapes_relation',{name:n,taux_reussite:t,ordre:newOrdre});
+    ['new-etape-input','new-etape-taux'].forEach(id=>document.getElementById(id).value='');
+    await loadAll();
+  }catch(e){alert(e.message);hideLoader();}
 }
+
+async function moveEtape(idx, direction){
+  // Swap avec le voisin
+  const newIdx=idx+direction;
+  if(newIdx<0||newIdx>=etapesRelation.length)return;
+  showLoader('Réordonnancement…');
+  try{
+    const a=etapesRelation[idx], b=etapesRelation[newIdx];
+    // On échange les ordres
+    await Promise.all([
+      sbPatch('etapes_relation',`name=eq.${encodeURIComponent(a.name)}`,{ordre:b.ordre}),
+      sbPatch('etapes_relation',`name=eq.${encodeURIComponent(b.name)}`,{ordre:a.ordre}),
+    ]);
+    await loadAll();
+  }catch(e){alert(e.message);hideLoader();}
+}
+
 async function removeEtape(n){if(!confirm(`Supprimer l'étape "${n}" ?`))return;showLoader('…');try{await sbDelete('etapes_relation',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function updateEtapeTaux(name,val){
   const t=Math.max(0,Math.min(100,parseInt(val)||0));
