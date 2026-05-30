@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E-Clid · Suivi ARR</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f6fa; --surface: #ffffff; --surface2: #f0f2f7; --border: #dde1ec;
+    --accent: #2f6de0; --accent2: #6d44b8; --green: #16a267; --orange: #d4880a;
+    --red: #c93a3a; --text: #1a1d2e; --muted: #6b7280; --muted2: #4b5563;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; min-height: 100vh; }
+  input[type="date"] { -webkit-appearance: none; appearance: none; position: relative; }
+  input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; position: absolute; right:0; top:0; width:100%; height:100%; cursor:pointer; }
+
+  /* HEADER */
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 32px; border-bottom:1px solid var(--border); background:var(--surface); position:sticky; top:0; z-index:100; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .logo { font-family:'DM Serif Display',serif; font-size:22px; letter-spacing:-0.5px; color:var(--text); }
+  .logo span { color:var(--accent); }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .sync-status { font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; }
+  .sync-status.ok      { background:rgba(22,162,103,.12); color:var(--green); }
+  .sync-status.loading { background:rgba(47,109,224,.1);  color:var(--accent); }
+  .sync-status.error   { background:rgba(201,58,58,.1);   color:var(--red); }
+  .nav { display:flex; gap:4px; }
+  .nav-btn { padding:8px 16px; border-radius:8px; border:none; background:transparent; color:var(--muted2); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; }
+  .nav-btn:hover { background:var(--surface2); color:var(--text); }
+  .nav-btn.active { background:var(--accent); color:#fff; }
+
+  main { padding:32px; max-width:1280px; margin:0 auto; }
+  .screen { display:none; } .screen.active { display:block; }
+
+  /* KPI */
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:28px; }
+  .kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px 22px; position:relative; overflow:hidden; }
+  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .kpi-card.blue::before   { background:var(--accent); }
+  .kpi-card.green::before  { background:var(--green); }
+  .kpi-card.orange::before { background:var(--orange); }
+  .kpi-card.purple::before { background:var(--accent2); }
+  .kpi-card.teal::before   { background:#0891b2; }
+  .kpi-card.lime::before   { background:#65a30d; }
+  .kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; }
+  .kpi-value { font-family:'DM Serif Display',serif; font-size:28px; color:var(--text); line-height:1; }
+  .kpi-sub { font-size:11px; color:var(--muted); margin-top:6px; }
+
+  .section-title { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:14px; color:var(--text); }
+  .section-subtitle { font-size:12px; color:var(--muted); margin-bottom:14px; margin-top:-10px; }
+
+  /* TABLE */
+  .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-bottom:24px; }
+  table { width:100%; border-collapse:collapse; }
+  thead th { padding:12px 16px; text-align:left; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); border-bottom:1px solid var(--border); background:var(--surface2); }
+  tbody tr { border-bottom:1px solid var(--border); transition:background 0.1s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:var(--surface2); }
+  tbody td { padding:12px 16px; font-size:13px; color:var(--text); }
+  .mono { font-family:'DM Mono',monospace; font-size:12px; }
+  .tag { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .tag.active  { background:rgba(22,162,103,.12); color:var(--green); }
+  .tag.expired { background:rgba(201,58,58,.1);   color:var(--red); }
+  .tag.renewal { background:rgba(47,109,224,.1);  color:var(--accent); }
+  .tag.type    { background:rgba(109,68,184,.1);  color:var(--accent2); font-size:10px; }
+  .tag.inv-licence    { background:rgba(47,109,224,.1);  color:var(--accent);  font-size:10px; }
+  .tag.inv-poc        { background:rgba(212,136,10,.12); color:var(--orange);  font-size:10px; }
+  .tag.inv-prestation { background:rgba(109,68,184,.1);  color:var(--accent2); font-size:10px; }
+  .tag.inv-other      { background:rgba(107,114,128,.1); color:var(--muted2);  font-size:10px; }
+  .no-arr-badge { font-size:10px; color:var(--muted); font-style:italic; }
+
+  /* FORM */
+  .form-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px; }
+  .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; margin-bottom:18px; }
+  .form-group label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin-bottom:6px; }
+  .form-group input,.form-group select { width:100%; padding:9px 13px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; transition:border-color 0.15s; }
+  .form-group input:focus,.form-group select:focus { border-color:var(--accent); }
+  .form-group input::placeholder { color:var(--muted); }
+
+  .btn { padding:9px 22px; border-radius:8px; border:none; font-family:'DM Sans',sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.15s; }
+  .btn-primary   { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#2558c0; }
+  .btn-secondary { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .btn-secondary:hover { background:var(--border); }
+  .btn-edit   { background:rgba(47,109,224,.1);  color:var(--accent); border:1px solid rgba(47,109,224,.2); }
+  .btn-edit:hover { background:rgba(47,109,224,.2); }
+  .btn-danger { background:rgba(201,58,58,.1);   color:var(--red);    border:1px solid rgba(201,58,58,.2); }
+  .btn-danger:hover { background:rgba(201,58,58,.2); }
+  .btn-sm  { padding:4px 11px; font-size:11px; }
+  .btn-row { display:flex; gap:6px; }
+
+  .renewal-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .renewal-badge.urgent { background:rgba(201,58,58,.12); color:var(--red); }
+  .renewal-badge.soon   { background:rgba(212,136,10,.1); color:var(--orange); }
+  .renewal-badge.ok     { background:rgba(22,162,103,.1); color:var(--green); }
+
+  .empty { text-align:center; padding:40px 20px; color:var(--muted); }
+  .empty-icon { font-size:32px; margin-bottom:10px; }
+
+  /* MODAL */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:200; align-items:center; justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; width:90%; max-width:520px; box-shadow:0 12px 40px rgba(0,0,0,.15); }
+  .modal h3 { font-family:'DM Serif Display',serif; font-size:20px; margin-bottom:4px; }
+  .modal-subtitle { color:var(--muted); font-size:12px; margin-bottom:18px; }
+  .modal p { color:var(--muted2); margin-bottom:22px; line-height:1.6; }
+  .modal-btns { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
+
+  /* AUTOCOMPLETE */
+  .ac-wrap { position:relative; }
+  .ac-dropdown { display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--surface); border:1px solid var(--accent); border-radius:8px; z-index:500; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.12); }
+  .ac-dropdown.open { display:block; }
+  .ac-item { padding:9px 13px; font-size:13px; color:var(--text); cursor:pointer; transition:background 0.1s; }
+  .ac-item:hover,.ac-item.focused { background:var(--surface2); }
+  .ac-item mark { background:transparent; color:var(--accent); font-weight:700; }
+
+  /* BY TYPE */
+  .bytype-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-bottom:28px; }
+  .bytype-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; }
+  .bytype-name { font-weight:700; font-size:13px; margin-bottom:10px; color:var(--text); display:flex; align-items:center; gap:8px; }
+  .bytype-dot  { width:8px; height:8px; border-radius:50%; background:var(--accent2); flex-shrink:0; }
+  .bytype-row  { display:flex; justify-content:space-between; font-size:12px; color:var(--muted2); padding:3px 0; }
+  .bytype-val  { font-family:'DM Mono',monospace; font-size:12px; color:var(--text); font-weight:600; }
+
+  /* SETTINGS */
+  .type-list { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
+  .type-item { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--surface); border:1px solid var(--border); border-radius:8px; }
+  .add-type-row { display:flex; gap:10px; }
+  .add-type-row input { flex:1; padding:9px 13px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:13px; outline:none; }
+  .add-type-row input:focus { border-color:var(--accent); }
+
+  .text-green  { color:var(--green); }
+  .text-accent { color:var(--accent); }
+  .text-purple { color:var(--accent2); }
+
+  /* LOADING OVERLAY */
+  .page-loader { display:none; position:fixed; inset:0; background:rgba(244,246,250,.8); z-index:300; align-items:center; justify-content:center; flex-direction:column; gap:12px; }
+  .page-loader.active { display:flex; }
+  .spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .loader-text { font-size:13px; color:var(--muted2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">E<span>·</span>Clid <span style="font-family:'DM Mono';font-size:11px;color:var(--muted);">ARR</span></div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showScreen('dashboard',this)">Tableau de bord</button>
+    <button class="nav-btn" onclick="showScreen('clients',this)">Clients</button>
+    <button class="nav-btn" onclick="showScreen('renewals',this)">Renouvellements</button>
+    <button class="nav-btn" onclick="showScreen('invoices',this)">Factures</button>
+    <button class="nav-btn" onclick="showScreen('settings',this)">⚙ Paramètres</button>
+  </nav>
+  <div class="header-right">
+    <span class="sync-status loading" id="sync-status">⟳ Connexion…</span>
+  </div>
+</header>
+
+<main>
+  <!-- DASHBOARD -->
+  <div class="screen active" id="screen-dashboard">
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <h2 class="section-title">Par type de client</h2>
+    <p class="section-subtitle">Basé sur les contrats actifs aujourd'hui</p>
+    <div class="bytype-grid" id="bytype-grid"></div>
+    <h2 class="section-title">Factures contribuant à l'ARR aujourd'hui</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>N° Facture</th><th>Client</th><th>Type client</th><th>Type facture</th><th>Licences</th><th>Prix unit.</th><th>Période</th><th>ARR</th></tr></thead>
+      <tbody id="active-invoices-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div class="screen" id="screen-clients">
+    <h2 class="section-title">Synthèse par client</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Client</th><th>Type</th><th>Nb factures</th><th>CA exercice (prorata)</th><th>ARR actuel</th><th>Contrats actifs</th><th>Prochain renouvellement</th></tr></thead>
+      <tbody id="clients-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- RENEWALS -->
+  <div class="screen" id="screen-renewals">
+    <h2 class="section-title">Prochaines dates de renouvellement</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Client</th><th>Type</th><th>N° Facture</th><th>Date de fin</th><th>Jours restants</th><th>Montant facturé</th><th>ARR</th><th>Alerte</th></tr></thead>
+      <tbody id="renewals-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- INVOICES -->
+  <div class="screen" id="screen-invoices">
+    <div class="form-card">
+      <div class="section-title" style="margin-bottom:4px;">Ajouter une facture</div>
+      <div class="modal-subtitle">Prix unitaire en €/an. Le montant facturé est calculé au prorata de la durée réelle.</div>
+      <div class="form-grid">
+        <div class="form-group"><label>N° Facture</label><input type="text" id="f-num" placeholder="EX-2024-001"></div>
+        <div class="form-group"><label>Client</label>
+          <div class="ac-wrap">
+            <input type="text" id="f-client" placeholder="Nom du client" autocomplete="off"
+              oninput="acInput(this,'ac-add')" onkeydown="acKey(event,'ac-add')" onblur="acBlur('ac-add')">
+            <div class="ac-dropdown" id="ac-add"></div>
+          </div>
+        </div>
+        <div class="form-group"><label>Type de client</label><select id="f-type"><option value="">— Sélectionner —</option></select></div>
+        <div class="form-group"><label>Type de facture</label><select id="f-invtype"><option value="">— Sélectionner —</option></select></div>
+        <div class="form-group"><label>Nb licences</label><input type="number" id="f-qty" placeholder="10" min="1"></div>
+        <div class="form-group"><label>Prix unitaire (€/an)</label><input type="number" id="f-price" placeholder="500" min="0" step="0.01"></div>
+        <div class="form-group"><label>Date de début</label><input type="date" id="f-start"></div>
+        <div class="form-group"><label>Date de fin</label><input type="date" id="f-end"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addInvoice()">＋ Ajouter la facture</button>
+      <span id="form-error" style="color:var(--red);font-size:12px;margin-left:14px;"></span>
+    </div>
+    <h2 class="section-title">Toutes les factures</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>N° Facture</th><th>Client</th><th>Type client</th><th>Type facture</th><th>Licences</th><th>Prix unit.</th><th>Montant facturé</th><th>Début</th><th>Fin</th><th>ARR</th><th>Statut</th><th></th></tr></thead>
+      <tbody id="all-invoices-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings">
+    <h2 class="section-title">Paramètres</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px;">
+      <!-- Types de clients -->
+      <div>
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:6px;">Types de clients</h3>
+        <p class="section-subtitle" style="margin-top:0;margin-bottom:14px;">Ex : Expert-comptable, PME…</p>
+        <div class="form-card">
+          <div class="type-list" id="type-list"></div>
+          <div class="add-type-row">
+            <input type="text" id="new-type-input" placeholder="Nouveau type client" onkeydown="if(event.key==='Enter') addClientType()">
+            <button class="btn btn-primary" onclick="addClientType()">Ajouter</button>
+          </div>
+          <span id="type-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+        </div>
+      </div>
+
+      <!-- Types de factures -->
+      <div>
+        <h3 style="font-size:16px;font-weight:600;margin-bottom:6px;">Types de factures</h3>
+        <p class="section-subtitle" style="margin-top:0;margin-bottom:14px;">Seul le type marqué <strong>ARR</strong> contribue au calcul.</p>
+        <div class="form-card">
+          <div class="type-list" id="invtype-list"></div>
+          <div class="add-type-row" style="flex-wrap:wrap;gap:8px;">
+            <input type="text" id="new-invtype-input" placeholder="Nom du type (ex : Licence)" onkeydown="if(event.key==='Enter') addInvoiceType()" style="flex:1;min-width:120px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;white-space:nowrap;">
+              <input type="checkbox" id="new-invtype-arr" style="width:auto;padding:0;"> Compte dans l'ARR
+            </label>
+            <button class="btn btn-primary" onclick="addInvoiceType()">Ajouter</button>
+          </div>
+          <span id="invtype-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL SUPPRESSION -->
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal">
+    <h3>Supprimer la facture ?</h3>
+    <p id="modal-delete-msg"></p>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete')">Annuler</button>
+      <button class="btn btn-danger"    onclick="confirmDelete()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MODIFICATION -->
+<div class="modal-overlay" id="modal-edit">
+  <div class="modal">
+    <h3>Modifier la facture</h3>
+    <div class="modal-subtitle" id="edit-subtitle"></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Client</label>
+        <div class="ac-wrap">
+          <input type="text" id="e-client" autocomplete="off"
+            oninput="acInput(this,'ac-edit')" onkeydown="acKey(event,'ac-edit')" onblur="acBlur('ac-edit')">
+          <div class="ac-dropdown" id="ac-edit"></div>
+        </div>
+      </div>
+      <div class="form-group"><label>Type de client</label><select id="e-type"><option value="">— Sélectionner —</option></select></div>
+      <div class="form-group"><label>Type de facture</label><select id="e-invtype"><option value="">— Sélectionner —</option></select></div>
+      <div class="form-group"><label>Nb licences</label><input type="number" id="e-qty" min="1"></div>
+      <div class="form-group"><label>Prix unitaire (€/an)</label><input type="number" id="e-price" min="0" step="0.01"></div>
+      <div class="form-group"><label>Date de début</label><input type="date" id="e-start"></div>
+      <div class="form-group"><label>Date de fin</label><input type="date" id="e-end"></div>
+    </div>
+    <span id="edit-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit')">Annuler</button>
+      <button class="btn btn-primary"   onclick="confirmEdit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADER -->
+<div class="page-loader" id="page-loader">
+  <div class="spinner"></div>
+  <div class="loader-text" id="loader-text">Chargement…</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════════════════════════
+const SB_URL  = 'https://yaqsxulsvxpxqtrxxhlb.supabase.co/rest/v1';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlhcXN4dWxzdnhweHF0cnh4aGxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwNzQ4NDcsImV4cCI6MjA5NTY1MDg0N30.znKj47eFayTs1OD2Zo4q5qa6R-1KlCI8HoZ4p8RPtPM';
+const HEADERS = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+async function sbGet(table, params) {
+  const url = SB_URL + '/' + table + (params ? '?' + params : '');
+  const r = await fetch(url, { headers: HEADERS });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPost(table, body) {
+  const r = await fetch(SB_URL + '/' + table, { method:'POST', headers: HEADERS, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPatch(table, filter, body) {
+  const r = await fetch(SB_URL + '/' + table + '?' + filter, { method:'PATCH', headers: { ...HEADERS, 'Prefer':'return=representation' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbDelete(table, filter) {
+  const r = await fetch(SB_URL + '/' + table + '?' + filter, { method:'DELETE', headers: HEADERS });
+  if (!r.ok) throw new Error(await r.text());
+}
+async function sbUpsert(table, body) {
+  const r = await fetch(SB_URL + '/' + table, { method:'POST', headers: { ...HEADERS, 'Prefer':'resolution=merge-duplicates,return=representation' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let invoices      = [];
+let clientTypes   = [];
+let invoiceTypes  = []; // [{ name, counts_arr }]
+let clientTypeMap = {}; // { clientName: typeName }
+let deleteTarget  = null;
+let editTarget    = null;
+
+// ═══════════════════════════════════════════════════════════
+// LOADER / STATUS
+// ═══════════════════════════════════════════════════════════
+function showLoader(txt) { document.getElementById('loader-text').textContent = txt||'Chargement…'; document.getElementById('page-loader').classList.add('active'); }
+function hideLoader()    { document.getElementById('page-loader').classList.remove('active'); }
+function setSyncStatus(state, txt) {
+  const el = document.getElementById('sync-status');
+  el.className = 'sync-status ' + state;
+  el.textContent = txt;
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOAD ALL DATA
+// ═══════════════════════════════════════════════════════════
+async function loadAll() {
+  showLoader('Connexion à la base de données…');
+  setSyncStatus('loading', '⟳ Connexion…');
+  try {
+    const [rawInv, rawTypes, rawMap, rawInvTypes] = await Promise.all([
+      sbGet('invoices',       'select=*&order=start_date.desc'),
+      sbGet('client_types',   'select=name&order=name.asc'),
+      sbGet('client_type_map','select=*'),
+      sbGet('invoice_types',  'select=*&order=name.asc'),
+    ]);
+    invoices = rawInv.map(r => ({
+      id: r.id, num: r.num, client: r.client,
+      qty: r.qty, price: r.price,
+      start: r.start_date, end: r.end_date,
+      invType: r.inv_type || ''
+    }));
+    clientTypes  = rawTypes.map(r => r.name);
+    invoiceTypes = rawInvTypes; // [{ name, counts_arr }]
+    clientTypeMap = {};
+    rawMap.forEach(r => { clientTypeMap[r.client] = r.type_name; });
+    setSyncStatus('ok', '✓ Synchronisé');
+    renderAll();
+  } catch(e) {
+    setSyncStatus('error', '✗ Erreur connexion');
+    console.error(e);
+    alert('Impossible de se connecter à la base de données.\n\n' + e.message);
+  } finally {
+    hideLoader();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+const fmt  = n => new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n);
+const fmtD = d => new Date(d).toLocaleDateString('fr-FR');
+function today()       { const d=new Date(); d.setHours(0,0,0,0); return d; }
+function parseDate(s)  { const d=new Date(s); d.setHours(0,0,0,0); return d; }
+function daysBetween(a,b) { return Math.round((b-a)/86400000); }
+
+function invoiceAmount(inv) {
+  const days = daysBetween(parseDate(inv.start), parseDate(inv.end));
+  return days <= 0 ? 0 : inv.qty * inv.price * days / 365;
+}
+function arrValue(inv) { return inv.qty * inv.price; }
+
+function isActive(inv, date) {
+  const d = new Date(date); d.setHours(0,0,0,0);
+  return d >= parseDate(inv.start) && d < parseDate(inv.end);
+}
+function invoiceStatus(inv) {
+  const now = today();
+  if (now <  parseDate(inv.start)) return 'future';
+  if (now >= parseDate(inv.end))   return 'expired';
+  return 'active';
+}
+function daysUntilEnd(inv)    { return daysBetween(today(), parseDate(inv.end)); }
+function clientType(name)     { return clientTypeMap[name] || '—'; }
+
+// Est-ce que ce type de facture contribue à l'ARR ?
+function invTypeCountsArr(typeName) {
+  if (!typeName) return true; // si pas de type renseigné, on inclut par défaut
+  const t = invoiceTypes.find(t => t.name === typeName);
+  return t ? t.counts_arr : true;
+}
+
+function invTypeTag(typeName) {
+  if (!typeName) return '<span class="tag inv-other">—</span>';
+  const lower = typeName.toLowerCase();
+  let cls = 'inv-other';
+  if (lower.includes('licence') || lower.includes('license')) cls = 'inv-licence';
+  else if (lower.includes('poc')) cls = 'inv-poc';
+  else if (lower.includes('presta')) cls = 'inv-prestation';
+  return `<span class="tag ${cls}">${esc(typeName)}</span>`;
+}
+
+function getARRContributors() {
+  return invoices.filter(i => isActive(i, today()) && invTypeCountsArr(i.invType));
+}
+
+function billingOnExercice(year, clientFilter) {
+  const yS = new Date(year,0,1), yE = new Date(year,11,31,23,59,59);
+  let total = 0;
+  for (const inv of invoices) {
+    if (clientFilter && inv.client !== clientFilter) continue;
+    const s=parseDate(inv.start), e=parseDate(inv.end);
+    const oS=s<yS?yS:s, oE=e>yE?yE:e;
+    if (oS>=oE) continue;
+    const oDays=daysBetween(oS,oE), tDays=daysBetween(s,e);
+    if (tDays<=0) continue;
+    total += inv.qty * inv.price * oDays / tDays;
+  }
+  return total;
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════
+function renderAll() {
+  renderDashboard(); renderClients(); renderRenewals();
+  renderAllInvoices(); renderSettings(); populateTypeSelects();
+}
+
+function renderDashboard() {
+  const contributors = getARRContributors();
+  const year = today().getFullYear();
+  const arr  = contributors.reduce((s,i)=>s+arrValue(i),0);
+  const billing = billingOnExercice(year);
+  const totalLic = contributors.reduce((s,i)=>s+i.qty,0);
+  const avgPrice = totalLic>0 ? arr/totalLic : 0;
+  const activeClients = new Set(contributors.map(i=>i.client)).size;
+  const avgLic = activeClients>0 ? totalLic/activeClients : 0;
+  const clientCount = new Set(invoices.map(i=>i.client)).size;
+
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card blue">  <div class="kpi-label">ARR en cours</div><div class="kpi-value text-accent">${fmt(arr)}</div><div class="kpi-sub">Revenus récurrents annualisés</div></div>
+    <div class="kpi-card green"> <div class="kpi-label">Facturation ${year} (prorata)</div><div class="kpi-value text-green">${fmt(billing)}</div><div class="kpi-sub">Part des contrats dans l'exercice</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Licences actives</div><div class="kpi-value">${totalLic}</div><div class="kpi-sub">Sur les contrats en cours</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Prix moyen / licence</div><div class="kpi-value text-purple">${fmt(avgPrice)}</div><div class="kpi-sub">Base annuelle, contrats actifs</div></div>
+    <div class="kpi-card teal">  <div class="kpi-label">Moy. licences / client</div><div class="kpi-value">${avgLic.toFixed(1)}</div><div class="kpi-sub">${activeClients} client(s) actif(s)</div></div>
+    <div class="kpi-card lime">  <div class="kpi-label">Clients total</div><div class="kpi-value">${clientCount}</div><div class="kpi-sub">Clients distincts</div></div>`;
+
+  // Par type
+  const byType={}, seenBilling={};
+  for (const inv of contributors) {
+    const t = clientType(inv.client);
+    if (!byType[t]) byType[t]={arr:0,licences:0,clients:new Set(),billing:0};
+    byType[t].arr      += arrValue(inv);
+    byType[t].licences += inv.qty;
+    byType[t].clients.add(inv.client);
+    if (!seenBilling[inv.client]) {
+      seenBilling[inv.client]=true;
+      byType[t].billing += billingOnExercice(year, inv.client);
+    }
+  }
+  const tg = document.getElementById('bytype-grid');
+  if (!Object.keys(byType).length) { tg.innerHTML=`<div style="color:var(--muted);font-size:13px;">Aucune facture active.</div>`; }
+  else tg.innerHTML = Object.entries(byType).sort((a,b)=>b[1].arr-a[1].arr).map(([t,d])=>`
+    <div class="bytype-card">
+      <div class="bytype-name"><span class="bytype-dot"></span>${esc(t)}</div>
+      <div class="bytype-row"><span>ARR</span><span class="bytype-val text-accent">${fmt(d.arr)}</span></div>
+      <div class="bytype-row"><span>CA exercice ${year}</span><span class="bytype-val text-green">${fmt(d.billing)}</span></div>
+      <div class="bytype-row"><span>Licences actives</span><span class="bytype-val">${d.licences}</span></div>
+      <div class="bytype-row"><span>Clients</span><span class="bytype-val">${d.clients.size}</span></div>
+    </div>`).join('');
+
+  const tbody = document.getElementById('active-invoices-tbody');
+  if (!contributors.length) { tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">📋</div>Aucune facture active</div></td></tr>`; return; }
+  tbody.innerHTML = contributors.map(inv=>`<tr>
+    <td class="mono">${esc(inv.num)}</td><td><strong>${esc(inv.client)}</strong></td>
+    <td><span class="tag type">${esc(clientType(inv.client))}</span></td>
+    <td>${invTypeTag(inv.invType)}</td>
+    <td>${inv.qty}</td><td class="mono">${fmt(inv.price)}</td>
+    <td>${fmtD(inv.start)} → ${fmtD(inv.end)}</td>
+    <td class="mono text-accent">${fmt(arrValue(inv))}</td></tr>`).join('');
+}
+
+function renderClients() {
+  const clients = [...new Set(invoices.map(i=>i.client))].sort();
+  const tbody = document.getElementById('clients-tbody');
+  if (!clients.length) { tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div>Aucun client</div></td></tr>`; return; }
+  const year = today().getFullYear();
+  tbody.innerHTML = clients.map(client => {
+    const ci = invoices.filter(i=>i.client===client);
+    const arr = getARRContributors().filter(i=>i.client===client).reduce((s,i)=>s+arrValue(i),0);
+    const nextEnd = ci.filter(i=>invoiceStatus(i)==='active').sort((a,b)=>parseDate(a.end)-parseDate(b.end));
+    return `<tr>
+      <td><strong>${esc(client)}</strong></td>
+      <td><span class="tag type">${esc(clientType(client))}</span></td>
+      <td>${ci.length}</td>
+      <td class="mono">${fmt(billingOnExercice(year,client))}</td>
+      <td class="mono text-accent">${fmt(arr)}</td>
+      <td>${ci.filter(i=>isActive(i,today())).length}</td>
+      <td>${nextEnd.length?fmtD(nextEnd[0].end):'—'}</td></tr>`;
+  }).join('');
+}
+
+function renderRenewals() {
+  const active = invoices.filter(i=>invoiceStatus(i)==='active').sort((a,b)=>parseDate(a.end)-parseDate(b.end));
+  const tbody = document.getElementById('renewals-tbody');
+  if (!active.length) { tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔄</div>Aucun contrat actif</div></td></tr>`; return; }
+  tbody.innerHTML = active.map(inv => {
+    const days = daysUntilEnd(inv);
+    const badge = days<=30 ? `<span class="renewal-badge urgent">⚠ ${days} j</span>`
+                : days<=90 ? `<span class="renewal-badge soon">⏳ ${days} j</span>`
+                :             `<span class="renewal-badge ok">✓ ${days} j</span>`;
+    return `<tr>
+      <td><strong>${esc(inv.client)}</strong></td>
+      <td><span class="tag type">${esc(clientType(inv.client))}</span></td>
+      <td class="mono">${esc(inv.num)}</td><td>${fmtD(inv.end)}</td>
+      <td>${days} jours</td>
+      <td class="mono">${fmt(invoiceAmount(inv))}</td>
+      <td class="mono text-accent">${fmt(arrValue(inv))}</td>
+      <td>${badge}</td></tr>`;
+  }).join('');
+}
+
+function renderAllInvoices() {
+  const sorted = [...invoices].sort((a,b)=>parseDate(b.start)-parseDate(a.start));
+  const tbody = document.getElementById('all-invoices-tbody');
+  if (!sorted.length) { tbody.innerHTML=`<tr><td colspan="12"><div class="empty"><div class="empty-icon">📄</div>Aucune facture. Commencez par en ajouter une.</div></td></tr>`; return; }
+  const tagMap = {active:['active','Actif'],expired:['expired','Expiré'],future:['renewal','À venir']};
+  tbody.innerHTML = sorted.map(inv => {
+    const [cls,label] = tagMap[invoiceStatus(inv)]||['expired','—'];
+    const countsArr = invTypeCountsArr(inv.invType);
+    const arrCell = countsArr
+      ? `<td class="mono text-accent">${fmt(arrValue(inv))}</td>`
+      : `<td><span class="no-arr-badge">exclu ARR</span></td>`;
+    return `<tr>
+      <td class="mono">${esc(inv.num)}</td><td><strong>${esc(inv.client)}</strong></td>
+      <td><span class="tag type">${esc(clientType(inv.client))}</span></td>
+      <td>${invTypeTag(inv.invType)}</td>
+      <td>${inv.qty}</td><td class="mono">${fmt(inv.price)}</td>
+      <td class="mono">${fmt(invoiceAmount(inv))}</td>
+      <td>${fmtD(inv.start)}</td><td>${fmtD(inv.end)}</td>
+      ${arrCell}
+      <td><span class="tag ${cls}">${label}</span></td>
+      <td><div class="btn-row">
+        <button class="btn btn-edit btn-sm"   onclick="openEdit('${esc(inv.num)}')">Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="askDelete('${esc(inv.num)}')">Suppr.</button>
+      </div></td></tr>`;
+  }).join('');
+}
+
+function renderSettings() {
+  // Types clients
+  const list = document.getElementById('type-list');
+  if (!clientTypes.length) { list.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:8px 0;">Aucun type défini.</div>`; }
+  else list.innerHTML = clientTypes.map(t=>`
+    <div class="type-item">
+      <span>${esc(t)}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeClientType('${esc(t)}')">Supprimer</button>
+    </div>`).join('');
+
+  // Types factures
+  const invList = document.getElementById('invtype-list');
+  if (!invoiceTypes.length) { invList.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:8px 0;">Aucun type défini.</div>`; }
+  else invList.innerHTML = invoiceTypes.map(t=>`
+    <div class="type-item">
+      <span style="display:flex;align-items:center;gap:10px;">
+        ${esc(t.name)}
+        ${t.counts_arr
+          ? '<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(22,162,103,.12);padding:2px 8px;border-radius:20px;">ARR ✓</span>'
+          : '<span style="font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);padding:2px 8px;border-radius:20px;">exclu ARR</span>'}
+      </span>
+      <button class="btn btn-danger btn-sm" onclick="removeInvoiceType('${esc(t.name)}')">Supprimer</button>
+    </div>`).join('');
+}
+
+function populateTypeSelects() {
+  ['f-type','e-type'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+      clientTypes.map(t=>`<option value="${esc(t)}"${t===cur?' selected':''}>${esc(t)}</option>`).join('');
+  });
+  ['f-invtype','e-invtype'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+      invoiceTypes.map(t=>`<option value="${esc(t.name)}"${t.name===cur?' selected':''}>${esc(t.name)}${t.counts_arr?' (ARR)':' (exclu ARR)'}</option>`).join('');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// AJOUT
+// ═══════════════════════════════════════════════════════════
+async function addInvoice() {
+  const num=document.getElementById('f-num').value.trim();
+  const client=document.getElementById('f-client').value.trim();
+  const type=document.getElementById('f-type').value;
+  const invType=document.getElementById('f-invtype').value;
+  const qty=parseInt(document.getElementById('f-qty').value);
+  const price=parseFloat(document.getElementById('f-price').value);
+  const start=document.getElementById('f-start').value;
+  const end=document.getElementById('f-end').value;
+  const err=document.getElementById('form-error');
+
+  if (!num||!client||!qty||!price||!start||!end) { err.textContent='Tous les champs sont obligatoires (sauf les types).'; return; }
+  if (parseDate(end)<=parseDate(start)) { err.textContent='La date de fin doit être après la date de début.'; return; }
+  if (invoices.find(i=>i.num===num)) { err.textContent='Ce numéro de facture existe déjà.'; return; }
+  err.textContent='';
+
+  showLoader('Enregistrement…');
+  try {
+    await sbPost('invoices', { num, client, qty, price, start_date:start, end_date:end, inv_type:invType||null });
+    if (type) await sbUpsert('client_type_map', { client, type_name:type });
+    ['f-num','f-client','f-qty','f-price','f-start','f-end'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('f-type').value='';
+    document.getElementById('f-invtype').value='';
+    await loadAll();
+  } catch(e) { setSyncStatus('error','✗ Erreur'); alert('Erreur : '+e.message); hideLoader(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODIFICATION
+// ═══════════════════════════════════════════════════════════
+function openEdit(num) {
+  const inv = invoices.find(i=>i.num===num); if (!inv) return;
+  editTarget = num;
+  populateTypeSelects();
+  document.getElementById('edit-subtitle').textContent = 'Facture '+num;
+  document.getElementById('e-client').value  = inv.client;
+  document.getElementById('e-type').value    = clientTypeMap[inv.client]||'';
+  document.getElementById('e-invtype').value = inv.invType||'';
+  document.getElementById('e-qty').value     = inv.qty;
+  document.getElementById('e-price').value   = inv.price;
+  document.getElementById('e-start').value   = inv.start;
+  document.getElementById('e-end').value     = inv.end;
+  document.getElementById('edit-error').textContent='';
+  document.getElementById('modal-edit').classList.add('open');
+}
+
+async function confirmEdit() {
+  const client=document.getElementById('e-client').value.trim();
+  const type=document.getElementById('e-type').value;
+  const invType=document.getElementById('e-invtype').value;
+  const qty=parseInt(document.getElementById('e-qty').value);
+  const price=parseFloat(document.getElementById('e-price').value);
+  const start=document.getElementById('e-start').value;
+  const end=document.getElementById('e-end').value;
+  const err=document.getElementById('edit-error');
+
+  if (!client||!qty||!price||!start||!end) { err.textContent='Tous les champs sont obligatoires.'; return; }
+  if (parseDate(end)<=parseDate(start))    { err.textContent='La date de fin doit être après la date de début.'; return; }
+
+  closeModal('modal-edit');
+  showLoader('Mise à jour…');
+  try {
+    await sbPatch('invoices', `num=eq.${encodeURIComponent(editTarget)}`, { client, qty, price, start_date:start, end_date:end, inv_type:invType||null });
+    if (type) await sbUpsert('client_type_map', { client, type_name:type });
+    await loadAll();
+  } catch(e) { setSyncStatus('error','✗ Erreur'); alert('Erreur : '+e.message); hideLoader(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SUPPRESSION FACTURE
+// ═══════════════════════════════════════════════════════════
+function askDelete(num) {
+  deleteTarget=num;
+  const inv=invoices.find(i=>i.num===num);
+  document.getElementById('modal-delete-msg').textContent=`Supprimer la facture ${num} (${inv.client}, ${fmt(invoiceAmount(inv))}) ? Cette action est irréversible.`;
+  document.getElementById('modal-delete').classList.add('open');
+}
+async function confirmDelete() {
+  closeModal('modal-delete');
+  showLoader('Suppression…');
+  try {
+    await sbDelete('invoices', `num=eq.${encodeURIComponent(deleteTarget)}`);
+    await loadAll();
+  } catch(e) { setSyncStatus('error','✗ Erreur'); alert('Erreur : '+e.message); hideLoader(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TYPES CLIENTS
+// ═══════════════════════════════════════════════════════════
+async function addClientType() {
+  const val=document.getElementById('new-type-input').value.trim();
+  const err=document.getElementById('type-error');
+  if (!val) { err.textContent='Saisissez un nom de type.'; return; }
+  if (clientTypes.find(t=>t.toLowerCase()===val.toLowerCase())) { err.textContent='Ce type existe déjà.'; return; }
+  err.textContent='';
+  showLoader('Ajout du type…');
+  try {
+    await sbPost('client_types', { name:val });
+    document.getElementById('new-type-input').value='';
+    await loadAll();
+  } catch(e) { setSyncStatus('error','✗ Erreur'); alert('Erreur : '+e.message); hideLoader(); }
+}
+
+async function removeClientType(name) {
+  if (!confirm(`Supprimer le type "${name}" ? Les clients associés seront sans type.`)) return;
+  showLoader('Suppression du type…');
+  try {
+    await sbDelete('client_type_map', `type_name=eq.${encodeURIComponent(name)}`);
+    await sbDelete('client_types',    `name=eq.${encodeURIComponent(name)}`);
+    await loadAll();
+  } catch(e) { setSyncStatus('error','✗ Erreur'); alert('Erreur : '+e.message); hideLoader(); }
+}
+
+async function addInvoiceType() {
+  const val = document.getElementById('new-invtype-input').value.trim();
+  const countsArr = document.getElementById('new-invtype-arr').checked;
+  const err = document.getElementById('invtype-error');
+  if (!val) { err.textContent='Saisissez un nom de type.'; return; }
+  if (invoiceTypes.find(t=>t.name.toLowerCase()===val.toLowerCase())) { err.textContent='Ce type existe déjà.'; return; }
+  err.textContent='';
+  showLoader('Ajout du type…');
+  try {
+    await sbPost('invoice_types', { name:val, counts_arr:countsArr });
+    document.getElementById('new-invtype-input').value='';
+    document.getElementById('new-invtype-arr').checked=false;
+    await loadAll();
+  } catch(e) { setSyncStatus('error','✗ Erreur'); alert('Erreur : '+e.message); hideLoader(); }
+}
+
+async function removeInvoiceType(name) {
+  if (!confirm(`Supprimer le type de facture "${name}" ?`)) return;
+  showLoader('Suppression…');
+  try {
+    await sbDelete('invoice_types', `name=eq.${encodeURIComponent(name)}`);
+    await loadAll();
+  } catch(e) { setSyncStatus('error','✗ Erreur'); alert('Erreur : '+e.message); hideLoader(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODALS / NAV
+// ═══════════════════════════════════════════════════════════
+function closeModal(id) { document.getElementById(id).classList.remove('open'); deleteTarget=null; editTarget=null; }
+document.querySelectorAll('.modal-overlay').forEach(el => { el.addEventListener('click', e=>{ if(e.target===el) el.classList.remove('open'); }); });
+
+function showScreen(id, btn) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ESCAPE / AUTOCOMPLETE
+// ═══════════════════════════════════════════════════════════
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function clientList() { return [...new Set(invoices.map(i=>i.client))].sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'})); }
+function acInput(input, dropId) {
+  const q=input.value.trim(), drop=document.getElementById(dropId);
+  if (!q) { drop.classList.remove('open'); drop.innerHTML=''; return; }
+  const matches=clientList().filter(c=>c.toLowerCase().includes(q.toLowerCase()));
+  if (!matches.length||(matches.length===1&&matches[0].toLowerCase()===q.toLowerCase())) { drop.classList.remove('open'); drop.innerHTML=''; return; }
+  drop.innerHTML=matches.map(c=>{
+    const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    return `<div class="ac-item" data-val="${esc(c)}" onmousedown="acPick(event,'${dropId}')">${c.replace(re,'<mark>$1</mark>')}</div>`;
+  }).join('');
+  drop.classList.add('open');
+}
+function acPick(e, dropId) {
+  e.preventDefault();
+  const drop=document.getElementById(dropId), val=e.currentTarget.dataset.val;
+  drop.previousElementSibling.value=val;
+  const typeId=dropId==='ac-add'?'f-type':'e-type';
+  if (clientTypeMap[val]) document.getElementById(typeId).value=clientTypeMap[val];
+  drop.classList.remove('open'); drop.innerHTML='';
+}
+function acKey(e, dropId) {
+  const drop=document.getElementById(dropId), items=drop.querySelectorAll('.ac-item');
+  if (!items.length) return;
+  const focused=drop.querySelector('.ac-item.focused');
+  let idx=[...items].indexOf(focused);
+  if (e.key==='ArrowDown')      { e.preventDefault(); if(focused)focused.classList.remove('focused'); items[Math.min(idx+1,items.length-1)].classList.add('focused'); }
+  else if (e.key==='ArrowUp')   { e.preventDefault(); if(focused)focused.classList.remove('focused'); items[Math.max(idx-1,0)].classList.add('focused'); }
+  else if (e.key==='Enter'&&focused) { e.preventDefault(); drop.previousElementSibling.value=focused.dataset.val; drop.classList.remove('open'); drop.innerHTML=''; }
+  else if (e.key==='Escape')    { drop.classList.remove('open'); }
+}
+function acBlur(dropId) { setTimeout(()=>{ document.getElementById(dropId).classList.remove('open'); },150); }
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+loadAll();
+</script>
+</body>
+</html>
