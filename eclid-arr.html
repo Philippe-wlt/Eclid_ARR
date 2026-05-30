@@ -858,6 +858,7 @@ function renderPipeAnalyse(){
 }
 
 // SETTINGS
+function renderSettings(){
   // Client types
   const tl=document.getElementById('type-list');
   tl.innerHTML=clientTypes.length?clientTypes.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeClientType('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun type.</div>';
