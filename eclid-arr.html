@@ -129,6 +129,18 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 .text-purple{color:var(--accent2);}
 .text-orange{color:var(--orange);}
 .text-rose{color:#be185d;}
+.motif-zone{display:none;margin-top:10px;padding:12px;background:rgba(201,58,58,.05);border:1px solid rgba(201,58,58,.15);border-radius:8px;}
+.motif-zone.visible{display:block;}
+.motif-zone label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--red);display:block;margin-bottom:8px;}
+.motif-check{display:flex;flex-wrap:wrap;gap:8px;}
+.motif-check label{display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:6px;background:var(--surface);border:1px solid rgba(201,58,58,.2);color:var(--text);}
+.motif-check input[type=radio]{width:auto;padding:0;}
+.pie-wrap{display:flex;align-items:center;gap:32px;flex-wrap:wrap;}
+.pie-legend{display:flex;flex-direction:column;gap:8px;min-width:180px;}
+.pie-legend-item{display:flex;align-items:center;gap:8px;font-size:12px;}
+.pie-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.churn-section{background:rgba(201,58,58,.04);border:1px solid rgba(201,58,58,.15);border-radius:14px;padding:20px;margin-bottom:24px;}
+.churn-title{font-family:'DM Serif Display',serif;font-size:17px;margin-bottom:14px;color:var(--red);padding-bottom:10px;border-bottom:1px solid rgba(201,58,58,.15);}
 .page-loader{display:none;position:fixed;inset:0;background:rgba(244,246,250,.8);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
 .page-loader.active{display:flex;}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
@@ -175,6 +187,27 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
         </tr></thead>
         <tbody id="pipe-etape-tbody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- CHURN -->
+  <div class="churn-section">
+    <div class="churn-title">📉 Churn — 12 derniers mois glissants</div>
+    <div class="kpi-grid" id="churn-kpi-grid" style="margin-bottom:20px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex-wrap:wrap;">
+      <div>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:10px;">Factures non renouvelées</h3>
+        <div class="table-wrap" style="margin-bottom:0;"><table>
+          <thead><tr><th>Client</th><th>Facture</th><th>Fin</th><th>ARR perdu</th><th>Montant</th><th>Motif</th></tr></thead>
+          <tbody id="churn-tbody"></tbody>
+        </table></div>
+      </div>
+      <div>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:10px;">Motifs de non-renouvellement</h3>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;">
+          <div class="pie-wrap"><canvas id="churn-pie" width="180" height="180"></canvas><div class="pie-legend" id="churn-pie-legend"></div></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -257,6 +290,15 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     </tr></thead>
     <tbody id="prospects-tbody"></tbody>
   </table></div>
+
+  <!-- CAMEMBERT MOTIFS REFUS -->
+  <div class="pipe-section" id="refus-section" style="display:none;">
+    <div class="pipe-section-title">🚫 Motifs de refus — prospects fermés/perdus</div>
+    <div class="pie-wrap">
+      <canvas id="refus-pie" width="200" height="200"></canvas>
+      <div class="pie-legend" id="refus-pie-legend"></div>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ ANALYSE PIPE ═══ -->
@@ -354,6 +396,30 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
         <span id="lieu-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
       </div>
     </div>
+    <div class="settings-col">
+      <h3>Motifs de perte (prospects)</h3>
+      <p class="section-subtitle" style="margin-top:4px;">Affichés quand un prospect est marqué Fermé/Perdu.</p>
+      <div class="form-card">
+        <div class="type-list" id="motifs-perte-list"></div>
+        <div class="add-type-row">
+          <input type="text" id="new-motif-perte-input" placeholder="Nouveau motif" onkeydown="if(event.key==='Enter') addMotifPerte()">
+          <button class="btn btn-primary" onclick="addMotifPerte()">Ajouter</button>
+        </div>
+        <span id="motif-perte-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+      </div>
+    </div>
+    <div class="settings-col">
+      <h3>Motifs de non-renouvellement</h3>
+      <p class="section-subtitle" style="margin-top:4px;">Affichés quand une facture est marquée non renouvelée.</p>
+      <div class="form-card">
+        <div class="type-list" id="motifs-nonrenew-list"></div>
+        <div class="add-type-row">
+          <input type="text" id="new-motif-nonrenew-input" placeholder="Nouveau motif" onkeydown="if(event.key==='Enter') addMotifNonRenew()">
+          <button class="btn btn-primary" onclick="addMotifNonRenew()">Ajouter</button>
+        </div>
+        <span id="motif-nonrenew-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+      </div>
+    </div>
     <div class="settings-col" style="grid-column:1/-1;">
       <h3>Étapes de la relation</h3>
       <p class="section-subtitle" style="margin-top:4px;">Le taux de réussite pondère les projections ARR et CA. Utilisez ↑ ↓ pour réordonner.</p>
@@ -403,6 +469,17 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
       <div class="form-group"><label>Date de fin</label><input type="date" id="e-end"></div>
     </div>
     <span id="edit-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+    <!-- Non-renouvellement -->
+    <div style="margin-top:14px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="e-nonrenew" style="width:auto;padding:0;" onchange="toggleNonRenew()">
+        <span style="font-weight:600;color:var(--red);">Facture non renouvelée</span>
+      </label>
+      <div class="motif-zone" id="e-nonrenew-zone">
+        <label>Motif de non-renouvellement <span style="color:var(--red)">*</span></label>
+        <div class="motif-check" id="e-nonrenew-motifs"></div>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="btn btn-secondary" onclick="closeModal('modal-edit')">Annuler</button>
       <button class="btn btn-primary" onclick="confirmEdit()">Enregistrer</button>
@@ -440,10 +517,14 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="p-ferme" style="width:auto;padding:0;">
+        <input type="checkbox" id="p-ferme" style="width:auto;padding:0;" onchange="toggleFerme()">
         <span style="font-weight:600;color:var(--red);">Fermé / Perdu</span>
         <span style="font-size:11px;color:var(--muted);">(exclut ce prospect des projections)</span>
       </label>
+    </div>
+    <div class="motif-zone" id="p-motif-zone">
+      <label>Motif de perte <span style="color:var(--red)">*</span></label>
+      <div class="motif-check" id="p-motif-check"></div>
     </div>
     <div style="background:rgba(47,109,224,.06);border:1px solid rgba(47,109,224,.15);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted2);margin-bottom:8px;" id="p-ca-preview"></div>
     <span id="prospect-error" style="color:var(--red);font-size:12px;display:block;margin-top:4px;"></span>
@@ -485,6 +566,7 @@ async function sbUpsert(t,b){const r=await fetch(SB_URL+'/'+t,{method:'POST',hea
 let invoices=[],clientTypes=[],invoiceTypes=[],clientTypeMap={};
 let prospects=[],prospectProblematiques={};
 let problematiques=[],lieuxRencontre=[],etapesRelation=[];
+let motifsPerte=[],motifsNonRenew=[];
 let deleteTarget=null,editTarget=null,prospectEditId=null,deleteProspectTarget=null;
 
 // LOADER
@@ -497,7 +579,7 @@ async function loadAll(){
   showLoader('Chargement des données…');
   setSyncStatus('loading','⟳ Connexion…');
   try{
-    const [rInv,rCT,rCTM,rIT,rPr,rPb,rPbM,rLR,rEt]=await Promise.all([
+    const [rInv,rCT,rCTM,rIT,rPr,rPb,rPbM,rLR,rEt,rMP,rMNR]=await Promise.all([
       sbGet('invoices','select=*&order=start_date.desc'),
       sbGet('client_types','select=name&order=name.asc'),
       sbGet('client_type_map','select=*'),
@@ -507,8 +589,10 @@ async function loadAll(){
       sbGet('prospect_problematiques','select=*'),
       sbGet('lieux_rencontre','select=name&order=name.asc'),
       sbGet('etapes_relation','select=*&order=ordre.asc'),
+      sbGet('motifs_perte_prospect','select=name&order=ordre.asc'),
+      sbGet('motifs_non_renouvellement','select=name&order=ordre.asc'),
     ]);
-    invoices=rInv.map(r=>({id:r.id,num:r.num,client:r.client,qty:r.qty,price:r.price,start:r.start_date,end:r.end_date,invType:r.inv_type||''} ));
+    invoices=rInv.map(r=>({id:r.id,num:r.num,client:r.client,qty:r.qty,price:r.price,start:r.start_date,end:r.end_date,invType:r.inv_type||'',nonRenouvele:r.non_renouvele||false,motifNonRenouvele:r.motif_non_renouvellement||''}));
     clientTypes=rCT.map(r=>r.name);
     invoiceTypes=rIT;
     clientTypeMap={};rCTM.forEach(r=>{clientTypeMap[r.client]=r.type_name;});
@@ -516,6 +600,8 @@ async function loadAll(){
     problematiques=rPb.map(r=>r.name);
     lieuxRencontre=rLR.map(r=>r.name);
     etapesRelation=rEt;
+    motifsPerte=rMP.map(r=>r.name);
+    motifsNonRenew=rMNR.map(r=>r.name);
     prospectProblematiques={};
     rPbM.forEach(r=>{if(!prospectProblematiques[r.prospect_id])prospectProblematiques[r.prospect_id]=[];prospectProblematiques[r.prospect_id].push(r.problematique);});
     setSyncStatus('ok','✓ Synchronisé');
@@ -567,6 +653,36 @@ function activeProspects(){return prospects.filter(p=>!p.ferme_perdu);}
 
 // RENDER ALL
 function renderAll(){renderDashboard();renderClients();renderRenewals();renderAllInvoices();renderProspects();renderPipeAnalyse();renderSettings();populateTypeSelects();}
+
+// PIE CHART HELPER
+const PIE_COLORS=['#2f6de0','#16a267','#d4880a','#6d44b8','#0891b2','#be185d','#65a30d','#c93a3a','#b45309','#9d174d'];
+function drawPie(canvasId,legendId,data){
+  // data = [{label, value}]
+  const canvas=document.getElementById(canvasId);
+  const legend=document.getElementById(legendId);
+  if(!canvas||!legend)return;
+  const total=data.reduce((s,d)=>s+d.value,0);
+  if(!total){canvas.style.display='none';legend.innerHTML='<span style="color:var(--muted);font-size:12px;">Aucune donnée</span>';return;}
+  canvas.style.display='block';
+  const ctx=canvas.getContext('2d');
+  const cx=canvas.width/2,cy=canvas.height/2,r=Math.min(cx,cy)-8;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  let angle=-Math.PI/2;
+  data.forEach((d,i)=>{
+    const slice=2*Math.PI*d.value/total;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,angle,angle+slice);
+    ctx.closePath();ctx.fillStyle=PIE_COLORS[i%PIE_COLORS.length];ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    angle+=slice;
+  });
+  legend.innerHTML=data.map((d,i)=>`
+    <div class="pie-legend-item">
+      <span class="pie-dot" style="background:${PIE_COLORS[i%PIE_COLORS.length]};"></span>
+      <span>${esc(d.label)}</span>
+      <span style="margin-left:auto;font-weight:700;font-family:'DM Mono',monospace;font-size:11px;">${d.value} (${Math.round(d.value/total*100)}%)</span>
+    </div>`).join('');
+}
 
 // DASHBOARD
 function renderDashboard(){
@@ -653,6 +769,35 @@ function renderDashboard(){
     <td>${inv.qty}</td><td class="mono">${fmt(inv.price)}</td>
     <td>${fmtD(inv.start)} → ${fmtD(inv.end)}</td>
     <td class="mono text-accent">${fmt(arrValue(inv))}</td></tr>`).join('');
+
+  // CHURN — 12 mois glissants
+  const limit=new Date(today());limit.setFullYear(limit.getFullYear()-1);
+  const churnInvs=invoices.filter(i=>i.nonRenouvele&&parseDate(i.end)>=limit&&parseDate(i.end)<=today());
+  const churnARR=churnInvs.reduce((s,i)=>s+arrValue(i),0);
+  const churnMontant=churnInvs.reduce((s,i)=>s+invoiceAmount(i),0);
+  const totalARR=arr+churnARR;
+  const churnRate=totalARR>0?churnARR/totalARR*100:0;
+  document.getElementById('churn-kpi-grid').innerHTML=`
+    <div class="kpi-card red" style="--c:var(--red)"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--red);"></div>
+      <div class="kpi-label">Factures non renouvelées</div><div class="kpi-value" style="color:var(--red);">${churnInvs.length}</div><div class="kpi-sub">12 derniers mois</div></div>
+    <div class="kpi-card red" style="--c:var(--red)"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--red);"></div>
+      <div class="kpi-label">ARR perdu</div><div class="kpi-value" style="color:var(--red);">${fmt(churnARR)}</div><div class="kpi-sub">ARR des contrats perdus</div></div>
+    <div class="kpi-card red" style="--c:var(--red)"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--red);"></div>
+      <div class="kpi-label">Montant facturé perdu</div><div class="kpi-value" style="color:var(--red);">${fmt(churnMontant)}</div><div class="kpi-sub">Proratisé sur la durée</div></div>
+    <div class="kpi-card red" style="--c:var(--red)"><div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--red);"></div>
+      <div class="kpi-label">Taux de churn ARR</div><div class="kpi-value" style="color:var(--red);">${churnRate.toFixed(1)}%</div><div class="kpi-sub">ARR perdu / (ARR actuel + perdu)</div></div>`;
+  const churnTbody=document.getElementById('churn-tbody');
+  if(!churnInvs.length){churnTbody.innerHTML=`<tr><td colspan="6"><div class="empty" style="padding:16px;"><div class="empty-icon">✓</div>Aucun churn sur 12 mois</div></td></tr>`;}
+  else{churnTbody.innerHTML=churnInvs.map(i=>`<tr>
+    <td><strong>${esc(i.client)}</strong></td><td class="mono">${esc(i.num)}</td>
+    <td>${fmtD(i.end)}</td>
+    <td class="mono" style="color:var(--red);">${fmt(arrValue(i))}</td>
+    <td class="mono">${fmt(invoiceAmount(i))}</td>
+    <td><span class="tag ferme">${esc(i.motifNonRenouvele||'—')}</span></td></tr>`).join('');}
+  // Pie churn motifs
+  const churnMotifMap={};
+  churnInvs.forEach(i=>{const m=i.motifNonRenouvele||'Non renseigné';churnMotifMap[m]=(churnMotifMap[m]||0)+1;});
+  drawPie('churn-pie','churn-pie-legend',Object.entries(churnMotifMap).map(([label,value])=>({label,value})));
 }
 
 // CLIENTS
@@ -752,12 +897,24 @@ function renderProspects(){
       <td class="mono">${ca&&!ferme?fmt(ca):'<span class="no-arr-badge">exclu</span>'}</td>
       <td>${p.closing_date?fmtD(p.closing_date):'—'}</td>
       <td style="max-width:200px;font-size:12px;color:var(--muted2);">${p.commentaire?esc(p.commentaire).replace(/\n/g,'<br>'):'<span style="color:var(--border);">—</span>'}</td>
-      <td>${ferme?'<span class="tag ferme">Fermé/Perdu</span>':'<span class="tag active">Actif</span>'}</td>
+      <td>${ferme?`<span class="tag ferme">Fermé/Perdu${p.motif_perte?` · ${p.motif_perte}`:''}</span>`:'<span class="tag active">Actif</span>'}</td>
       <td><div class="btn-row">
         <button class="btn btn-edit btn-sm" onclick="openProspectModal('${p.id}')">Modifier</button>
         <button class="btn btn-danger btn-sm" onclick="askDeleteProspect('${p.id}')">Suppr.</button>
       </div></td></tr>`;
   }).join('');
+
+  // Camembert motifs de refus
+  const fermes=prospects.filter(p=>p.ferme_perdu&&p.motif_perte);
+  const refusSection=document.getElementById('refus-section');
+  if(fermes.length){
+    refusSection.style.display='block';
+    const motifMap={};
+    fermes.forEach(p=>{const m=p.motif_perte;motifMap[m]=(motifMap[m]||0)+1;});
+    drawPie('refus-pie','refus-pie-legend',Object.entries(motifMap).map(([label,value])=>({label,value})));
+  } else {
+    refusSection.style.display='none';
+  }
 }
 
 // SETTINGS
@@ -889,15 +1046,40 @@ function renderSettings(){
       </span>
       <button class="btn btn-danger btn-sm" onclick="removeEtape('${esc(e.name)}')">Supprimer</button>
     </div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucune étape.</div>';
+  // Motifs perte prospect
+  const mpl=document.getElementById('motifs-perte-list');
+  mpl.innerHTML=motifsPerte.length?motifsPerte.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeMotifPerte('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun motif.</div>';
+  // Motifs non-renouvellement
+  const mnrl=document.getElementById('motifs-nonrenew-list');
+  mnrl.innerHTML=motifsNonRenew.length?motifsNonRenew.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeMotifNonRenew('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun motif.</div>';
+  // Populate non-renew motifs in edit modal
+  const mnrDiv=document.getElementById('e-nonrenew-motifs');
+  if(mnrDiv)mnrDiv.innerHTML=motifsNonRenew.map(m=>`<label><input type="radio" name="e-motif-nr" value="${esc(m)}"> ${esc(m)}</label>`).join('');
 }
 
 function populateTypeSelects(){
   ['f-type','e-type'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+clientTypes.map(t=>`<option value="${esc(t)}"${t===c?' selected':''} >${esc(t)}</option>`).join('');});
   ['f-invtype','e-invtype'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+invoiceTypes.map(t=>`<option value="${esc(t.name)}"${t.name===c?' selected':''} >${esc(t.name)}${t.counts_arr?' (ARR)':' (exclu ARR)'}</option>`).join('');});
-  // Prospect selects
   ['p-type'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+clientTypes.map(t=>`<option value="${esc(t)}"${t===c?' selected':''} >${esc(t)}</option>`).join('');});
   ['p-lieu'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+lieuxRencontre.map(t=>`<option value="${esc(t)}"${t===c?' selected':''} >${esc(t)}</option>`).join('');});
   ['p-etape'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+etapesRelation.map(e=>`<option value="${esc(e.name)}"${e.name===c?' selected':''} >${esc(e.name)} (${e.taux_reussite}%)</option>`).join('');});
+  // Motifs fermé/perdu prospect
+  const pmz=document.getElementById('p-motif-check');
+  if(pmz)pmz.innerHTML=motifsPerte.map(m=>`<label><input type="radio" name="p-motif" value="${esc(m)}"> ${esc(m)}</label>`).join('');
+  // Motifs non-renouvellement facture
+  const mnrDiv2=document.getElementById('e-nonrenew-motifs');
+  if(mnrDiv2)mnrDiv2.innerHTML=motifsNonRenew.map(m=>`<label><input type="radio" name="e-motif-nr" value="${esc(m)}"> ${esc(m)}</label>`).join('');
+}
+
+function toggleFerme(){
+  const checked=document.getElementById('p-ferme').checked;
+  document.getElementById('p-motif-zone').classList.toggle('visible',checked);
+  if(!checked)document.querySelectorAll('input[name="p-motif"]').forEach(r=>r.checked=false);
+}
+function toggleNonRenew(){
+  const checked=document.getElementById('e-nonrenew').checked;
+  document.getElementById('e-nonrenew-zone').classList.toggle('visible',checked);
+  if(!checked)document.querySelectorAll('input[name="e-motif-nr"]').forEach(r=>r.checked=false);
 }
 
 // PROSPECT MODAL
@@ -927,6 +1109,9 @@ function openProspectModal(id){
     document.getElementById('p-closing').value=p.closing_date||'';;
     document.getElementById('p-ferme').checked=p.ferme_perdu||false;
     document.getElementById('p-commentaire').value=p.commentaire||'';
+    // Motif perte
+    toggleFerme();
+    if(p.motif_perte){const r=document.querySelector(`input[name="p-motif"][value="${CSS.escape(p.motif_perte)}"]`);if(r)r.checked=true;}
   } else {
     document.getElementById('prospect-modal-title').textContent='Nouveau prospect';
     ['p-nom','p-prenom','p-email','p-tel','p-poste','p-societe','p-effectif','p-licences','p-arr','p-closing','p-commentaire'].forEach(id=>document.getElementById(id).value='');
@@ -934,6 +1119,7 @@ function openProspectModal(id){
     document.getElementById('p-lieu').value='';
     document.getElementById('p-etape').value='';
     document.getElementById('p-ferme').checked=false;
+    toggleFerme();
   }
   document.getElementById('prospect-error').textContent='';
   updateCAPreview();
@@ -972,17 +1158,20 @@ async function saveProspect(){
   const closing=document.getElementById('p-closing').value||null;
   const ferme=document.getElementById('p-ferme').checked;
   const commentaire=document.getElementById('p-commentaire').value.trim()||null;
+  const motifPerteEl=document.querySelector('input[name="p-motif"]:checked');
+  const motif_perte=motifPerteEl?motifPerteEl.value:null;
   const selPbs=[...document.querySelectorAll('#p-problematiques input:checked')].map(c=>c.value);
   const err=document.getElementById('prospect-error');
 
   if(!nom||!prenom||!email||!tel||!poste||!societe||!lieu||!etape){err.textContent='Veuillez remplir tous les champs obligatoires.';return;}
+  if(ferme&&!motif_perte){err.textContent='Veuillez sélectionner un motif de perte.';return;}
   err.textContent='';
   // Capturer l'ID AVANT closeModal qui le remet à null
   const pid=prospectEditId;
   closeModal('modal-prospect');
   showLoader('Enregistrement…');
   try{
-    const body={nom,prenom,email,telephone:tel,poste,societe,effectif,type_entreprise:type_entreprise||null,lieu_rencontre:lieu,etape,potentiel_licences:licences,potentiel_arr:arr,closing_date:closing,ferme_perdu:ferme,commentaire};
+    const body={nom,prenom,email,telephone:tel,poste,societe,effectif,type_entreprise:type_entreprise||null,lieu_rencontre:lieu,etape,potentiel_licences:licences,potentiel_arr:arr,closing_date:closing,ferme_perdu:ferme,commentaire,motif_perte:ferme?motif_perte:null};
     let finalPid=pid;
     if(pid){
       await sbPatch('prospects',`id=eq.${pid}`,body);
@@ -1034,10 +1223,13 @@ function openEdit(num){
   editTarget=num;populateTypeSelects();
   document.getElementById('edit-subtitle').textContent='Facture '+num;
   document.getElementById('e-client').value=inv.client;
-  document.getElementById('e-type').value=clientTypeMap[inv.client]||'';;
-  document.getElementById('e-invtype').value=inv.invType||'';;
+  document.getElementById('e-type').value=clientTypeMap[inv.client]||'';
+  document.getElementById('e-invtype').value=inv.invType||'';
   document.getElementById('e-qty').value=inv.qty;document.getElementById('e-price').value=inv.price;
   document.getElementById('e-start').value=inv.start;document.getElementById('e-end').value=inv.end;
+  document.getElementById('e-nonrenew').checked=inv.nonRenouvele||false;
+  toggleNonRenew();
+  if(inv.motifNonRenouvele){const r=document.querySelector(`input[name="e-motif-nr"][value="${CSS.escape(inv.motifNonRenouvele)}"]`);if(r)r.checked=true;}
   document.getElementById('edit-error').textContent='';
   document.getElementById('modal-edit').classList.add('open');
 }
@@ -1045,12 +1237,17 @@ async function confirmEdit(){
   const client=document.getElementById('e-client').value.trim(),type=document.getElementById('e-type').value;
   const invType=document.getElementById('e-invtype').value,qty=parseInt(document.getElementById('e-qty').value);
   const price=parseFloat(document.getElementById('e-price').value),start=document.getElementById('e-start').value,end=document.getElementById('e-end').value;
+  const nonRenouvele=document.getElementById('e-nonrenew').checked;
+  const motifNREl=document.querySelector('input[name="e-motif-nr"]:checked');
+  const motifNR=motifNREl?motifNREl.value:null;
   const err=document.getElementById('edit-error');
   if(!client||!qty||!price||!start||!end){err.textContent='Champs obligatoires manquants.';return;}
   if(parseDate(end)<=parseDate(start)){err.textContent='Date de fin invalide.';return;}
+  if(nonRenouvele&&!motifNR){err.textContent='Veuillez sélectionner un motif de non-renouvellement.';return;}
+  const num=editTarget;
   closeModal('modal-edit');showLoader('Mise à jour…');
   try{
-    await sbPatch('invoices',`num=eq.${encodeURIComponent(editTarget)}`,{client,qty,price,start_date:start,end_date:end,inv_type:invType||null});
+    await sbPatch('invoices',`num=eq.${encodeURIComponent(num)}`,{client,qty,price,start_date:start,end_date:end,inv_type:invType||null,non_renouvele:nonRenouvele,motif_non_renouvellement:nonRenouvele?motifNR:null});
     if(type)await sbUpsert('client_type_map',{client,type_name:type});
     await loadAll();
   }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
@@ -1066,6 +1263,10 @@ async function confirmDelete(){
 
 // SETTINGS CRUD
 async function addClientType(){const v=document.getElementById('new-type-input').value.trim(),err=document.getElementById('type-error');if(!v){err.textContent='Saisissez un nom.';return;}if(clientTypes.find(t=>t.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('client_types',{name:v});document.getElementById('new-type-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function addMotifPerte(){const v=document.getElementById('new-motif-perte-input').value.trim(),err=document.getElementById('motif-perte-error');if(!v){err.textContent='Saisissez un motif.';return;}if(motifsPerte.includes(v)){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('motifs_perte_prospect',{name:v,ordre:motifsPerte.length+1});document.getElementById('new-motif-perte-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function removeMotifPerte(n){if(!confirm(`Supprimer le motif "${n}" ?`))return;showLoader('…');try{await sbDelete('motifs_perte_prospect',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function addMotifNonRenew(){const v=document.getElementById('new-motif-nonrenew-input').value.trim(),err=document.getElementById('motif-nonrenew-error');if(!v){err.textContent='Saisissez un motif.';return;}if(motifsNonRenew.includes(v)){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('motifs_non_renouvellement',{name:v,ordre:motifsNonRenew.length+1});document.getElementById('new-motif-nonrenew-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function removeMotifNonRenew(n){if(!confirm(`Supprimer le motif "${n}" ?`))return;showLoader('…');try{await sbDelete('motifs_non_renouvellement',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeClientType(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('client_type_map',`type_name=eq.${encodeURIComponent(n)}`);await sbDelete('client_types',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addInvoiceType(){const v=document.getElementById('new-invtype-input').value.trim(),arr=document.getElementById('new-invtype-arr').checked,err=document.getElementById('invtype-error');if(!v){err.textContent='Saisissez un nom.';return;}if(invoiceTypes.find(t=>t.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('invoice_types',{name:v,counts_arr:arr});document.getElementById('new-invtype-input').value='';document.getElementById('new-invtype-arr').checked=false;await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeInvoiceType(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('invoice_types',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
