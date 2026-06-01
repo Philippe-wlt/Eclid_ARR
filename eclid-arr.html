@@ -764,7 +764,9 @@ function prospectCAExercice(p){
   const daysLeft=Math.max(0,daysBetween(closing,yearEnd));
   return p.potentiel_arr*daysLeft/365;
 }
-function activeProspects(){return prospects.filter(p=>!p.ferme_perdu);}
+function activeProspects(){
+  return prospects.filter(p=>!p.ferme_perdu && p.etape && p.etape!=='—' && p.etape!=='');
+}
 
 // ════════════════════════════════════════════════════════════════
 // RENDU — ORCHESTRATION GÉNÉRALE
@@ -848,7 +850,7 @@ function renderDashboard(){
   const pCaBrut=ap.reduce((s,p)=>s+prospectCAExercice(p),0);
   const pCaPond=ap.reduce((s,p)=>s+prospectCAExercice(p)*getEtapeTaux(p.etape),0);
   document.getElementById('pipe-kpi-grid').innerHTML=`
-    <div class="kpi-card sky"><div class="kpi-label">Prospects actifs</div><div class="kpi-value">${ap.length}</div><div class="kpi-sub">${prospects.filter(p=>p.ferme_perdu).length} fermé(s)/perdu(s)</div></div>
+    <div class="kpi-card sky"><div class="kpi-label">Prospects actifs</div><div class="kpi-value">${ap.length}</div><div class="kpi-sub">${prospects.filter(p=>p.ferme_perdu&&p.etape&&p.etape!=='—').length} fermé(s)/perdu(s)</div></div>
     <div class="kpi-card teal"><div class="kpi-label">ARR projeté brut</div><div class="kpi-value text-accent">${fmt(pArrBrut)}</div><div class="kpi-sub">Sans pondération</div></div>
     <div class="kpi-card green"><div class="kpi-label">ARR projeté pondéré</div><div class="kpi-value text-green">${fmt(pArrPond)}</div><div class="kpi-sub">× taux de réussite</div></div>
     <div class="kpi-card amber"><div class="kpi-label">CA exercice brut</div><div class="kpi-value text-orange">${fmt(pCaBrut)}</div><div class="kpi-sub">Sans pondération</div></div>
@@ -1012,6 +1014,9 @@ function renderProspects(){
   }).join('');
 
   let list=prospects.filter(p=>{
+    // Exclure les fiches fantômes créées par la migration (clients sans étape réelle)
+    const hasRealEtape=p.etape && p.etape!=='—' && p.etape!=='';
+    if(!hasRealEtape && !p.ferme_perdu) return false;
     if(fermeF==='actif'&&p.ferme_perdu)return false;
     if(fermeF==='ferme'&&!p.ferme_perdu)return false;
     if(etapeF&&p.etape!==etapeF)return false;
