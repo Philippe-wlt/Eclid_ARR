@@ -1191,7 +1191,7 @@ function computeChurnForYear(year){
   const arrPerdu=invs.reduce((s,i)=>s+arrValue(i)*churnRatio(i),0);
 
   // ARR total de référence = ARR actuel + ARR perdu dans l'année
-  const arrRef=computeARR(today())+arrPerdu;
+  const arrRef=getARRContributors().reduce((s,i)=>s+arrValue(i),0)+arrPerdu;
   const tauxChurnARR=arrRef>0?arrPerdu/arrRef*100:0;
 
   // CA perdu (montant facturé × taux churn)
