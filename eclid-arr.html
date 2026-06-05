@@ -307,40 +307,58 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 
 <!-- ═══ ANALYSE PIPE ═══ -->
 <div class="screen" id="screen-pipe-analyse">
-  <h2 class="section-title">Analyse du pipe par type de client</h2>
+  <h2 class="section-title">Analyse du pipe</h2>
   <p class="section-subtitle">Basé sur les prospects actifs (hors fermés/perdus)</p>
 
   <div class="kpi-grid" id="pa-kpi-grid" style="margin-bottom:28px;"></div>
 
-  <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Détail par type de client</h3>
+  <!-- PAR TYPE DE CLIENT -->
+  <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;">Par type de client</h3>
   <div class="table-wrap">
     <table>
       <thead><tr>
-        <th>Type de client</th>
-        <th>Nb prospects</th>
-        <th>Nb licences potentielles</th>
-        <th>ARR brut</th>
-        <th>ARR pondéré</th>
-        <th>Prix moyen / licence</th>
-        <th>Taux moyen pondération</th>
+        <th>Type de client</th><th>Nb prospects</th><th>Licences pot.</th>
+        <th>ARR brut</th><th>ARR pondéré</th><th>Prix moy. / licence</th><th>Taux moy.</th>
       </tr></thead>
       <tbody id="pa-tbody"></tbody>
     </table>
   </div>
 
-  <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;margin-top:8px;">Détail par étape × type de client</h3>
+  <!-- PAR ÉTAPE × TYPE -->
+  <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;margin-top:8px;">Par étape × type de client</h3>
   <div class="table-wrap">
     <table>
       <thead><tr>
-        <th>Étape</th>
-        <th>Type de client</th>
-        <th>Nb prospects</th>
-        <th>Licences pot.</th>
-        <th>ARR brut</th>
-        <th>ARR pondéré</th>
-        <th>Prix moy. / licence</th>
+        <th>Étape</th><th>Type de client</th><th>Nb prospects</th>
+        <th>Licences pot.</th><th>ARR brut</th><th>ARR pondéré</th><th>Prix moy. / licence</th>
       </tr></thead>
       <tbody id="pa-cross-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- PAR SOURCE DU PIPE -->
+  <h3 style="font-size:16px;font-weight:600;margin-bottom:6px;margin-top:8px;">Par source du pipe</h3>
+  <p class="section-subtitle" style="margin-top:0;">Toutes sources confondues</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Source du pipe</th><th>Nb prospects</th><th>Licences pot.</th>
+        <th>ARR brut</th><th>ARR pondéré</th>
+      </tr></thead>
+      <tbody id="pa-source-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- PAR ÉVÉNEMENT (salons) -->
+  <h3 style="font-size:16px;font-weight:600;margin-bottom:6px;margin-top:8px;">Par événement</h3>
+  <p class="section-subtitle" style="margin-top:0;">Prospects associés à un événement spécifique</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Événement</th><th>Source</th><th>Nb prospects</th><th>Licences pot.</th>
+        <th>ARR brut</th><th>ARR pondéré</th>
+      </tr></thead>
+      <tbody id="pa-event-tbody"></tbody>
     </table>
   </div>
 </div>
@@ -1197,7 +1215,6 @@ function renderPipeAnalyse(){
   if(!crossRows.length){
     crossTbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="empty-icon">🎯</div>Aucune donnée</div></td></tr>`;
   } else {
-    // Regrouper les lignes par étape pour afficher un séparateur visuel
     let lastEtape='';
     crossTbody.innerHTML=crossRows.map(r=>{
       const isNewEtape=r.etape!==lastEtape;
@@ -1213,6 +1230,58 @@ function renderPipeAnalyse(){
         <td class="mono text-purple">${r.licences>0?fmt(prixMoy):'—'}</td>
       </tr>`;
     }).join('');
+  }
+
+  // ── PAR SOURCE DU PIPE ──
+  const bySource={};
+  for(const p of ap){
+    const s=p.source_pipe||'Non renseigné';
+    if(!bySource[s])bySource[s]={count:0,licences:0,arrBrut:0,arrPond:0};
+    bySource[s].count++;
+    bySource[s].licences+=(p.potentiel_licences||0);
+    bySource[s].arrBrut+=(p.potentiel_arr||0);
+    bySource[s].arrPond+=(p.potentiel_arr||0)*getEtapeTaux(p.etape);
+  }
+  const sourceTbody=document.getElementById('pa-source-tbody');
+  if(!Object.keys(bySource).length){
+    sourceTbody.innerHTML=`<tr><td colspan="5"><div class="empty"><div class="empty-icon">📊</div>Aucune donnée</div></td></tr>`;
+  } else {
+    sourceTbody.innerHTML=Object.entries(bySource)
+      .sort((a,b)=>b[1].arrPond-a[1].arrPond)
+      .map(([source,d])=>`<tr>
+        <td><strong>${esc(source)}</strong></td>
+        <td>${d.count}</td>
+        <td>${d.licences||'—'}</td>
+        <td class="mono">${fmt(d.arrBrut)}</td>
+        <td class="mono text-green"><strong>${fmt(d.arrPond)}</strong></td>
+      </tr>`).join('');
+  }
+
+  // ── PAR ÉVÉNEMENT ──
+  const byEvent={};
+  for(const p of ap){
+    if(!p.evenement)continue;
+    const ev=p.evenement;
+    if(!byEvent[ev])byEvent[ev]={source:p.source_pipe||'—',count:0,licences:0,arrBrut:0,arrPond:0};
+    byEvent[ev].count++;
+    byEvent[ev].licences+=(p.potentiel_licences||0);
+    byEvent[ev].arrBrut+=(p.potentiel_arr||0);
+    byEvent[ev].arrPond+=(p.potentiel_arr||0)*getEtapeTaux(p.etape);
+  }
+  const eventTbody=document.getElementById('pa-event-tbody');
+  if(!Object.keys(byEvent).length){
+    eventTbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎪</div>Aucun prospect associé à un événement</div></td></tr>`;
+  } else {
+    eventTbody.innerHTML=Object.entries(byEvent)
+      .sort((a,b)=>b[1].arrPond-a[1].arrPond)
+      .map(([ev,d])=>`<tr>
+        <td><strong>${esc(ev)}</strong></td>
+        <td><span class="tag type">${esc(d.source)}</span></td>
+        <td>${d.count}</td>
+        <td>${d.licences||'—'}</td>
+        <td class="mono">${fmt(d.arrBrut)}</td>
+        <td class="mono text-green"><strong>${fmt(d.arrPond)}</strong></td>
+      </tr>`).join('');
   }
 }
 
