@@ -1633,8 +1633,9 @@ function toggleNonRenew(){
 // ════════════════════════════════════════════════════════════════
 function openProspectModal(id){
   prospectEditId=id||null;
+  // D'abord peupler les listes déroulantes
   populateTypeSelects();
-  // Build checkboxes for problematiques
+  // Puis construire les checkboxes problématiques
   const pbDiv=document.getElementById('p-problematiques');
   const currentPbs=id&&prospectProblematiques[id]?prospectProblematiques[id]:[];
   pbDiv.innerHTML=problematiques.map(pb=>`<label><input type="checkbox" value="${esc(pb)}" ${currentPbs.includes(pb)?'checked':''} onchange="updateCAPreview()"> ${esc(pb)}</label>`).join('');
@@ -1642,20 +1643,17 @@ function openProspectModal(id){
   if(id){
     const p=prospects.find(x=>x.id===id);
     document.getElementById('prospect-modal-title').textContent='Modifier le prospect';
-    document.getElementById('p-nom').value=p.nom||'';;
-    document.getElementById('p-prenom').value=p.prenom||'';;
-    document.getElementById('p-email').value=p.email||'';;
-    document.getElementById('p-tel').value=p.telephone||'';;
-    document.getElementById('p-poste').value=p.poste||'';;
-    document.getElementById('p-societe').value=p.societe||'';;
-    document.getElementById('p-effectif').value=p.effectif||'';;
-    document.getElementById('p-type').value=p.type_entreprise||'';;
-    document.getElementById('p-source').value=p.source_pipe||'';;
-    document.getElementById('p-etape').value=p.etape||'';;
-    document.getElementById('p-licences').value=p.potentiel_licences||'';;
-    document.getElementById('p-arr').value=p.potentiel_arr||'';;
-    document.getElementById('p-closing').value=p.closing_date||'';;
-    document.getElementById('p-genre').value=p.genre||'';
+    // Champs texte
+    document.getElementById('p-nom').value=p.nom||'';
+    document.getElementById('p-prenom').value=p.prenom||'';
+    document.getElementById('p-email').value=p.email||'';
+    document.getElementById('p-tel').value=p.telephone||'';
+    document.getElementById('p-poste').value=p.poste||'';
+    document.getElementById('p-societe').value=p.societe||'';
+    document.getElementById('p-effectif').value=p.effectif||'';
+    document.getElementById('p-licences').value=p.potentiel_licences||'';
+    document.getElementById('p-arr').value=p.potentiel_arr||'';
+    document.getElementById('p-closing').value=p.closing_date||'';
     document.getElementById('p-adresse1').value=p.adresse1||'';
     document.getElementById('p-adresse2').value=p.adresse2||'';
     document.getElementById('p-cp').value=p.code_postal||'';
@@ -1663,15 +1661,21 @@ function openProspectModal(id){
     document.getElementById('p-pays').value=p.pays||'';
     document.getElementById('p-site').value=p.site_internet||'';
     document.getElementById('p-linkedin').value=p.url_linkedin||'';
-    document.getElementById('p-linkedin-connecte').checked=p.linkedin_connecte||false;
-    document.getElementById('p-evenement').value=p.evenement||'';
-    document.getElementById('p-ferme').checked=p.ferme_perdu||false;
     document.getElementById('p-commentaire').value=p.commentaire||'';
     document.getElementById('p-d-nom').value=p.decideur_nom||'';
     document.getElementById('p-d-prenom').value=p.decideur_prenom||'';
     document.getElementById('p-d-fonction').value=p.decideur_fonction||'';
     document.getElementById('p-d-email').value=p.decideur_email||'';
     document.getElementById('p-d-tel').value=p.decideur_tel||'';
+    // Checkboxes
+    document.getElementById('p-linkedin-connecte').checked=p.linkedin_connecte||false;
+    document.getElementById('p-ferme').checked=p.ferme_perdu||false;
+    // Selects — assignés APRÈS populateTypeSelects() pour que les options existent
+    document.getElementById('p-genre').value=p.genre||'';
+    document.getElementById('p-type').value=p.type_entreprise||'';
+    document.getElementById('p-source').value=p.source_pipe||'';
+    document.getElementById('p-etape').value=p.etape||'';
+    document.getElementById('p-evenement').value=p.evenement||'';
     // Motif perte
     toggleFerme();
     if(p.motif_perte){const r=document.querySelector(`input[name="p-motif"][value="${CSS.escape(p.motif_perte)}"]`);if(r)r.checked=true;}
@@ -1752,7 +1756,23 @@ async function saveProspect(){
   closeModal('modal-prospect');
   showLoader('Enregistrement…');
   try{
-    const body={nom,prenom,email,telephone:tel,poste,societe,effectif,type_entreprise:type_entreprise||null,source_pipe:lieu,etape,potentiel_licences:licences,potentiel_arr:arr,closing_date:closing,ferme_perdu:ferme,commentaire,motif_perte:ferme?motif_perte:null,decideur_nom,decideur_prenom,decideur_fonction,decideur_email,decideur_tel};
+    const body={
+      nom,prenom,email,telephone:tel,poste,societe,effectif,
+      type_entreprise:type_entreprise||null,
+      source_pipe:lieu,
+      evenement:evenement||null,
+      etape,
+      potentiel_licences:licences,
+      potentiel_arr:arr,
+      closing_date:closing,
+      ferme_perdu:ferme,
+      commentaire,
+      motif_perte:ferme?motif_perte:null,
+      decideur_nom,decideur_prenom,decideur_fonction,decideur_email,decideur_tel,
+      genre,
+      adresse1,adresse2,code_postal,ville,pays,
+      site_internet,url_linkedin,linkedin_connecte
+    };
     let finalPid=pid;
     if(pid){
       await sbPatch('prospects',`id=eq.${pid}`,body);
