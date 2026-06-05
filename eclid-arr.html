@@ -389,7 +389,10 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 
 <!-- ═══ BASE CLIENTS ═══ -->
 <div class="screen" id="screen-base-clients">
-  <h2 class="section-title">Base clients unifiée</h2>
+  <div class="section-header" style="margin-bottom:8px;">
+    <h2 class="section-title" style="margin-bottom:0;">Base clients unifiée</h2>
+    <button class="btn btn-secondary" onclick="exportBaseClientsExcel()">⬇ Export Excel</button>
+  </div>
   <p class="section-subtitle">Clients facturés + prospects — détection automatique par nom de société</p>
 
   <!-- KPI -->
@@ -472,15 +475,15 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
       </div>
     </div>
     <div class="settings-col">
-      <h3>Lieux de rencontre</h3>
+      <h3>Source du pipe</h3>
       <p class="section-subtitle" style="margin-top:4px;">Sélectionnables sur la fiche prospect.</p>
       <div class="form-card">
-        <div class="type-list" id="lieux-list"></div>
+        <div class="type-list" id="sources-list"></div>
         <div class="add-type-row">
-          <input type="text" id="new-lieu-input" placeholder="Nouveau lieu" onkeydown="if(event.key==='Enter') addLieu()">
-          <button class="btn btn-primary" onclick="addLieu()">Ajouter</button>
+          <input type="text" id="new-source-input" placeholder="Nouvelle source" onkeydown="if(event.key==='Enter') addSource()">
+          <button class="btn btn-primary" onclick="addSource()">Ajouter</button>
         </div>
-        <span id="lieu-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+        <span id="source-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
       </div>
     </div>
     <div class="settings-col">
@@ -505,6 +508,19 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
           <button class="btn btn-primary" onclick="addMotifNonRenew()">Ajouter</button>
         </div>
         <span id="motif-nonrenew-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+      </div>
+    </div>
+    <div class="settings-col">
+      <h3>Événements</h3>
+      <p class="section-subtitle" style="margin-top:4px;">Salons, congrès, événements DFCG… sélectionnables dans la fiche prospect.</p>
+      <div class="form-card">
+        <div class="type-list" id="evenements-list"></div>
+        <div class="add-type-row" style="flex-wrap:wrap;gap:8px;">
+          <input type="text" id="new-event-input" placeholder="Nom de l'événement" style="flex:2;min-width:140px;">
+          <input type="date" id="new-event-date" style="width:150px;">
+          <button class="btn btn-primary" onclick="addEvenement()">Ajouter</button>
+        </div>
+        <span id="event-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
       </div>
     </div>
     <div class="settings-col" style="grid-column:1/-1;">
@@ -586,6 +602,14 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     <h3 id="prospect-modal-title">Nouveau prospect</h3>
     <div class="modal-subtitle">Les champs marqués <span style="color:var(--red)">*</span> sont obligatoires</div>
     <div class="form-grid-wide">
+      <div class="form-group"><label>Genre <span class="req">*</span></label>
+        <select id="p-genre">
+          <option value="">— Sélectionner —</option>
+          <option value="M.">M.</option>
+          <option value="Mme">Mme</option>
+          <option value="Autre">Autre</option>
+        </select>
+      </div>
       <div class="form-group"><label>Nom <span class="req">*</span></label><input type="text" id="p-nom" placeholder="Dupont"></div>
       <div class="form-group"><label>Prénom <span class="req">*</span></label><input type="text" id="p-prenom" placeholder="Jean"></div>
       <div class="form-group"><label>Email <span class="req">*</span></label><input type="email" id="p-email" placeholder="jean@societe.fr"></div>
@@ -594,7 +618,8 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
       <div class="form-group"><label>Société <span class="req">*</span></label><input type="text" id="p-societe" placeholder="Nom de la société"></div>
       <div class="form-group"><label>Effectif</label><input type="number" id="p-effectif" placeholder="50" min="1"></div>
       <div class="form-group"><label>Type d'entreprise <span class="req">*</span></label><select id="p-type"><option value="">— Sélectionner —</option></select></div>
-      <div class="form-group"><label>Lieu de rencontre <span class="req">*</span></label><select id="p-lieu"><option value="">— Sélectionner —</option></select></div>
+      <div class="form-group"><label>Source du pipe <span class="req">*</span></label><select id="p-source"><option value="">— Sélectionner —</option></select></div>
+      <div class="form-group"><label>Événement de rencontre</label><select id="p-evenement"><option value="">— Aucun événement particulier —</option></select></div>
       <div class="form-group"><label>Étape <span class="req">*</span></label><select id="p-etape"><option value="">— Sélectionner —</option></select></div>
       <div class="form-group"><label>Potentiel licences</label><input type="number" id="p-licences" placeholder="5" min="1"></div>
       <div class="form-group"><label>Potentiel ARR (€)</label><input type="number" id="p-arr" placeholder="2000" min="0"></div>
@@ -614,6 +639,30 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
         <div class="form-group"><label>Email</label><input type="email" id="p-d-email" placeholder="claire@societe.fr"></div>
         <div class="form-group"><label>Téléphone</label><input type="text" id="p-d-tel" placeholder="06 00 00 00 00"></div>
       </div>
+    </div>
+    <!-- COORDONNÉES SOCIÉTÉ -->
+    <div style="background:rgba(22,162,103,.04);border:1px solid rgba(22,162,103,.12);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:10px;">🏢 Coordonnées société</div>
+      <div class="form-grid-wide" style="margin-bottom:0;">
+        <div class="form-group"><label>Adresse 1</label><input type="text" id="p-adresse1" placeholder="12 rue de la Paix"></div>
+        <div class="form-group"><label>Adresse 2</label><input type="text" id="p-adresse2" placeholder="Bâtiment A"></div>
+        <div class="form-group"><label>Code postal</label><input type="text" id="p-cp" placeholder="75001"></div>
+        <div class="form-group"><label>Ville</label><input type="text" id="p-ville" placeholder="Paris"></div>
+        <div class="form-group"><label>Pays</label><input type="text" id="p-pays" placeholder="France"></div>
+        <div class="form-group"><label>Site internet</label><input type="url" id="p-site" placeholder="https://www.societe.fr"></div>
+      </div>
+    </div>
+    <!-- LINKEDIN -->
+    <div style="background:rgba(10,102,194,.05);border:1px solid rgba(10,102,194,.15);border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#0a66c2;margin-bottom:10px;">🔗 LinkedIn</div>
+      <div class="form-grid-wide" style="margin-bottom:10px;">
+        <div class="form-group"><label>URL LinkedIn contact</label><input type="url" id="p-linkedin" placeholder="https://linkedin.com/in/..."></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="p-linkedin-connecte" style="width:auto;padding:0;">
+        <span>Connexion LinkedIn confirmée</span>
+        <span style="font-size:11px;color:var(--muted);">(demande acceptée)</span>
+      </label>
     </div>
     <div class="form-group" style="margin-bottom:14px;">
       <label>Commentaire</label>
@@ -671,8 +720,8 @@ async function sbUpsert(t,b){const r=await fetch(SB_URL+'/'+t,{method:'POST',hea
 // ════════════════════════════════════════════════════════════════
 let invoices=[],clientTypes=[],invoiceTypes=[],clientTypeMap={};
 let prospects=[],prospectProblematiques={};
-let problematiques=[],lieuxRencontre=[],etapesRelation=[];
-let motifsPerte=[],motifsNonRenew=[];
+let problematiques=[],sourcesPipe=[],etapesRelation=[];
+let motifsPerte=[],motifsNonRenew=[],evenements=[];
 let deleteTarget=null,editTarget=null,prospectEditId=null,deleteProspectTarget=null;
 
 // ────────────────────────────────────────────────────────────────
@@ -689,7 +738,7 @@ async function loadAll(){
   showLoader('Chargement des données…');
   setSyncStatus('loading','⟳ Connexion…');
   try{
-    const [rInv,rCT,rCTM,rIT,rPr,rPb,rPbM,rLR,rEt,rMP,rMNR]=await Promise.all([
+    const [rInv,rCT,rCTM,rIT,rPr,rPb,rPbM,rLR,rEt,rMP,rMNR,rEv]=await Promise.all([
       sbGet('invoices','select=*&order=start_date.desc'),
       sbGet('client_types','select=name&order=name.asc'),
       sbGet('client_type_map','select=*'),
@@ -697,21 +746,23 @@ async function loadAll(){
       sbGet('prospects','select=*&order=created_at.desc'),
       sbGet('problematiques','select=name&order=name.asc'),
       sbGet('prospect_problematiques','select=*'),
-      sbGet('lieux_rencontre','select=name&order=name.asc'),
+      sbGet('sources_pipe','select=name&order=name.asc'),
       sbGet('etapes_relation','select=*&order=ordre.asc'),
       sbGet('motifs_perte_prospect','select=name&order=ordre.asc'),
       sbGet('motifs_non_renouvellement','select=name&order=ordre.asc'),
+      sbGet('evenements','select=*&order=ordre.asc'),
     ]);
     invoices=rInv.map(r=>({id:r.id,num:r.num,client:r.client,qty:r.qty,price:r.price,start:r.start_date,end:r.end_date,invType:r.inv_type||'',tauxRenouvellement:r.taux_renouvellement??100,motifNonRenouvele:r.motif_non_renouvellement||''}));
     clientTypes=rCT.map(r=>r.name);
     invoiceTypes=rIT;
     clientTypeMap={};rCTM.forEach(r=>{clientTypeMap[r.client]=r.type_name;});
-    prospects=rPr;
+    prospects=rPr; // all fields mapped directly from Supabase
     problematiques=rPb.map(r=>r.name);
-    lieuxRencontre=rLR.map(r=>r.name);
+    sourcesPipe=rLR.map(r=>r.name);
     etapesRelation=rEt;
     motifsPerte=rMP.map(r=>r.name);
     motifsNonRenew=rMNR.map(r=>r.name);
+    evenements=rEv;
     prospectProblematiques={};
     rPbM.forEach(r=>{if(!prospectProblematiques[r.prospect_id])prospectProblematiques[r.prospect_id]=[];prospectProblematiques[r.prospect_id].push(r.problematique);});
     setSyncStatus('ok','✓ Synchronisé');
@@ -1365,7 +1416,7 @@ async function migrateClientsToProspects(){
     for(const name of toCreate){
       await sbPost('prospects',{
         nom:'—',prenom:'—',email:'—',telephone:'—',poste:'—',
-        societe:name,etape:'—',lieu_rencontre:'—',
+        societe:name,etape:'—',source_pipe:'—',
         ferme_perdu:false,est_client:true
       });
     }
@@ -1505,8 +1556,8 @@ function renderSettings(){
   const pl=document.getElementById('problematiques-list');
   pl.innerHTML=problematiques.length?problematiques.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeProblematique('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucune problématique.</div>';
   // Lieux
-  const ll=document.getElementById('lieux-list');
-  ll.innerHTML=lieuxRencontre.length?lieuxRencontre.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeLieu('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun lieu.</div>';
+  const ll=document.getElementById('sources-list');
+  ll.innerHTML=sourcesPipe.length?sourcesPipe.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeSource('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun lieu.</div>';
   // Etapes
   const el=document.getElementById('etapes-list');
   el.innerHTML=etapesRelation.length?etapesRelation.map((e,idx)=>`
@@ -1528,6 +1579,13 @@ function renderSettings(){
   // Motifs perte prospect
   const mpl=document.getElementById('motifs-perte-list');
   mpl.innerHTML=motifsPerte.length?motifsPerte.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeMotifPerte('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun motif.</div>';
+  // Événements
+  const evl=document.getElementById('evenements-list');
+  evl.innerHTML=evenements.length?evenements.map(e=>`
+    <div class="type-item">
+      <span><strong>${esc(e.name)}</strong>${e.date_evenement?` <span style="font-size:11px;color:var(--muted);">${new Date(e.date_evenement).toLocaleDateString('fr-FR')}</span>`:''}</span>
+      <button class="btn btn-danger btn-sm" onclick="removeEvenement('${esc(e.name)}')">Supprimer</button>
+    </div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun événement.</div>';
   // Motifs non-renouvellement
   const mnrl=document.getElementById('motifs-nonrenew-list');
   mnrl.innerHTML=motifsNonRenew.length?motifsNonRenew.map(t=>`<div class="type-item"><span>${esc(t)}</span><button class="btn btn-danger btn-sm" onclick="removeMotifNonRenew('${esc(t)}')">Supprimer</button></div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun motif.</div>';
@@ -1543,8 +1601,11 @@ function populateTypeSelects(){
   ['f-type','e-type'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+clientTypes.map(t=>`<option value="${esc(t)}"${t===c?' selected':''} >${esc(t)}</option>`).join('');});
   ['f-invtype','e-invtype'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+invoiceTypes.map(t=>`<option value="${esc(t.name)}"${t.name===c?' selected':''} >${esc(t.name)}${t.counts_arr?' (ARR)':' (exclu ARR)'}</option>`).join('');});
   ['p-type'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+clientTypes.map(t=>`<option value="${esc(t)}"${t===c?' selected':''} >${esc(t)}</option>`).join('');});
-  ['p-lieu'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+lieuxRencontre.map(t=>`<option value="${esc(t)}"${t===c?' selected':''} >${esc(t)}</option>`).join('');});
+  ['p-source'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+sourcesPipe.map(t=>`<option value="${esc(t)}"${t===c?' selected':''} >${esc(t)}</option>`).join('');});
   ['p-etape'].forEach(id=>{const s=document.getElementById(id);if(!s)return;const c=s.value;s.innerHTML='<option value="">— Sélectionner —</option>'+etapesRelation.map(e=>`<option value="${esc(e.name)}"${e.name===c?' selected':''} >${esc(e.name)} (${e.taux_reussite}%)</option>`).join('');});
+  // Événements
+  const evSel=document.getElementById('p-evenement');
+  if(evSel){const curEv=evSel.value;evSel.innerHTML='<option value="">— Aucun événement particulier —</option>'+evenements.map(e=>`<option value="${esc(e.name)}"${e.name===curEv?' selected':''}>${esc(e.name)}${e.date_evenement?' ('+new Date(e.date_evenement).toLocaleDateString('fr-FR')+')':''}</option>`).join('');}
   // Motifs fermé/perdu prospect
   const pmz=document.getElementById('p-motif-check');
   if(pmz)pmz.innerHTML=motifsPerte.map(m=>`<label><input type="radio" name="p-motif" value="${esc(m)}"> ${esc(m)}</label>`).join('');
@@ -1589,11 +1650,21 @@ function openProspectModal(id){
     document.getElementById('p-societe').value=p.societe||'';;
     document.getElementById('p-effectif').value=p.effectif||'';;
     document.getElementById('p-type').value=p.type_entreprise||'';;
-    document.getElementById('p-lieu').value=p.lieu_rencontre||'';;
+    document.getElementById('p-source').value=p.source_pipe||'';;
     document.getElementById('p-etape').value=p.etape||'';;
     document.getElementById('p-licences').value=p.potentiel_licences||'';;
     document.getElementById('p-arr').value=p.potentiel_arr||'';;
     document.getElementById('p-closing').value=p.closing_date||'';;
+    document.getElementById('p-genre').value=p.genre||'';
+    document.getElementById('p-adresse1').value=p.adresse1||'';
+    document.getElementById('p-adresse2').value=p.adresse2||'';
+    document.getElementById('p-cp').value=p.code_postal||'';
+    document.getElementById('p-ville').value=p.ville||'';
+    document.getElementById('p-pays').value=p.pays||'';
+    document.getElementById('p-site').value=p.site_internet||'';
+    document.getElementById('p-linkedin').value=p.url_linkedin||'';
+    document.getElementById('p-linkedin-connecte').checked=p.linkedin_connecte||false;
+    document.getElementById('p-evenement').value=p.evenement||'';
     document.getElementById('p-ferme').checked=p.ferme_perdu||false;
     document.getElementById('p-commentaire').value=p.commentaire||'';
     document.getElementById('p-d-nom').value=p.decideur_nom||'';
@@ -1606,9 +1677,12 @@ function openProspectModal(id){
     if(p.motif_perte){const r=document.querySelector(`input[name="p-motif"][value="${CSS.escape(p.motif_perte)}"]`);if(r)r.checked=true;}
   } else {
     document.getElementById('prospect-modal-title').textContent='Nouveau prospect';
-    ['p-nom','p-prenom','p-email','p-tel','p-poste','p-societe','p-effectif','p-licences','p-arr','p-closing','p-commentaire','p-d-nom','p-d-prenom','p-d-fonction','p-d-email','p-d-tel'].forEach(id=>document.getElementById(id).value='');
+    ['p-nom','p-prenom','p-email','p-tel','p-poste','p-societe','p-effectif','p-licences','p-arr','p-closing','p-commentaire','p-d-nom','p-d-prenom','p-d-fonction','p-d-email','p-d-tel','p-adresse1','p-adresse2','p-cp','p-ville','p-pays','p-site','p-linkedin'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('p-genre').value='';
+    document.getElementById('p-evenement').value='';
+    document.getElementById('p-linkedin-connecte').checked=false;
     document.getElementById('p-type').value='';
-    document.getElementById('p-lieu').value='';
+    document.getElementById('p-source').value='';
     document.getElementById('p-etape').value='';
     document.getElementById('p-ferme').checked=false;
     toggleFerme();
@@ -1643,11 +1717,21 @@ async function saveProspect(){
   const societe=document.getElementById('p-societe').value.trim();
   const effectif=parseInt(document.getElementById('p-effectif').value)||null;
   const type_entreprise=document.getElementById('p-type').value;
-  const lieu=document.getElementById('p-lieu').value;
+  const lieu=document.getElementById('p-source').value;
   const etape=document.getElementById('p-etape').value;
   const licences=parseInt(document.getElementById('p-licences').value)||null;
   const arr=parseFloat(document.getElementById('p-arr').value)||null;
   const closing=document.getElementById('p-closing').value||null;
+  const genre=document.getElementById('p-genre').value||null;
+  const adresse1=document.getElementById('p-adresse1').value.trim()||null;
+  const adresse2=document.getElementById('p-adresse2').value.trim()||null;
+  const code_postal=document.getElementById('p-cp').value.trim()||null;
+  const ville=document.getElementById('p-ville').value.trim()||null;
+  const pays=document.getElementById('p-pays').value.trim()||null;
+  const site_internet=document.getElementById('p-site').value.trim()||null;
+  const url_linkedin=document.getElementById('p-linkedin').value.trim()||null;
+  const linkedin_connecte=document.getElementById('p-linkedin-connecte').checked;
+  const evenement=document.getElementById('p-evenement').value||null;
   const ferme=document.getElementById('p-ferme').checked;
   const commentaire=document.getElementById('p-commentaire').value.trim()||null;
   const decideur_nom=document.getElementById('p-d-nom').value.trim()||null;
@@ -1660,7 +1744,7 @@ async function saveProspect(){
   const selPbs=[...document.querySelectorAll('#p-problematiques input:checked')].map(c=>c.value);
   const err=document.getElementById('prospect-error');
 
-  if(!nom||!prenom||!email||!tel||!poste||!societe||!lieu||!etape){err.textContent='Veuillez remplir tous les champs obligatoires.';return;}
+  if(!genre||!nom||!prenom||!email||!tel||!poste||!societe||!lieu||!etape){err.textContent='Veuillez remplir tous les champs obligatoires (genre inclus).';return;}
   if(ferme&&!motif_perte){err.textContent='Veuillez sélectionner un motif de perte.';return;}
   err.textContent='';
   // Capturer l'ID AVANT closeModal qui le remet à null
@@ -1668,7 +1752,7 @@ async function saveProspect(){
   closeModal('modal-prospect');
   showLoader('Enregistrement…');
   try{
-    const body={nom,prenom,email,telephone:tel,poste,societe,effectif,type_entreprise:type_entreprise||null,lieu_rencontre:lieu,etape,potentiel_licences:licences,potentiel_arr:arr,closing_date:closing,ferme_perdu:ferme,commentaire,motif_perte:ferme?motif_perte:null,decideur_nom,decideur_prenom,decideur_fonction,decideur_email,decideur_tel};
+    const body={nom,prenom,email,telephone:tel,poste,societe,effectif,type_entreprise:type_entreprise||null,source_pipe:lieu,etape,potentiel_licences:licences,potentiel_arr:arr,closing_date:closing,ferme_perdu:ferme,commentaire,motif_perte:ferme?motif_perte:null,decideur_nom,decideur_prenom,decideur_fonction,decideur_email,decideur_tel};
     let finalPid=pid;
     if(pid){
       await sbPatch('prospects',`id=eq.${pid}`,body);
@@ -1787,13 +1871,15 @@ async function addMotifPerte(){const v=document.getElementById('new-motif-perte-
 async function removeMotifPerte(n){if(!confirm(`Supprimer le motif "${n}" ?`))return;showLoader('…');try{await sbDelete('motifs_perte_prospect',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addMotifNonRenew(){const v=document.getElementById('new-motif-nonrenew-input').value.trim(),err=document.getElementById('motif-nonrenew-error');if(!v){err.textContent='Saisissez un motif.';return;}if(motifsNonRenew.includes(v)){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('motifs_non_renouvellement',{name:v,ordre:motifsNonRenew.length+1});document.getElementById('new-motif-nonrenew-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeMotifNonRenew(n){if(!confirm(`Supprimer le motif "${n}" ?`))return;showLoader('…');try{await sbDelete('motifs_non_renouvellement',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function addEvenement(){const v=document.getElementById('new-event-input').value.trim(),dt=document.getElementById('new-event-date').value,err=document.getElementById('event-error');if(!v){err.textContent='Saisissez un nom.';return;}if(evenements.find(e=>e.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('evenements',{name:v,date_evenement:dt||null,ordre:evenements.length+1});document.getElementById('new-event-input').value='';document.getElementById('new-event-date').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function removeEvenement(n){if(!confirm(`Supprimer l'événement "${n}" ?`))return;showLoader('…');try{await sbDelete('evenements',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeClientType(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('client_type_map',`type_name=eq.${encodeURIComponent(n)}`);await sbDelete('client_types',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addInvoiceType(){const v=document.getElementById('new-invtype-input').value.trim(),arr=document.getElementById('new-invtype-arr').checked,err=document.getElementById('invtype-error');if(!v){err.textContent='Saisissez un nom.';return;}if(invoiceTypes.find(t=>t.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('invoice_types',{name:v,counts_arr:arr});document.getElementById('new-invtype-input').value='';document.getElementById('new-invtype-arr').checked=false;await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeInvoiceType(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('invoice_types',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addProblematique(){const v=document.getElementById('new-pb-input').value.trim(),err=document.getElementById('pb-error');if(!v){err.textContent='Saisissez un nom.';return;}if(problematiques.includes(v)){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('problematiques',{name:v});document.getElementById('new-pb-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeProblematique(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('problematiques',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
-async function addLieu(){const v=document.getElementById('new-lieu-input').value.trim(),err=document.getElementById('lieu-error');if(!v){err.textContent='Saisissez un nom.';return;}if(lieuxRencontre.includes(v)){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('lieux_rencontre',{name:v});document.getElementById('new-lieu-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
-async function removeLieu(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('lieux_rencontre',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function addSource(){const v=document.getElementById('new-source-input').value.trim(),err=document.getElementById('source-error');if(!v){err.textContent='Saisissez un nom.';return;}if(sourcesPipe.includes(v)){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('sources_pipe',{name:v});document.getElementById('new-source-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function removeSource(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('sources_pipe',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addEtape(){
   const n=document.getElementById('new-etape-input').value.trim();
   const t=parseInt(document.getElementById('new-etape-taux').value)||50;
@@ -1831,6 +1917,87 @@ async function updateEtapeTaux(name,val){
   const t=Math.max(0,Math.min(100,parseInt(val)||0));
   try{await sbPatch('etapes_relation',`name=eq.${encodeURIComponent(name)}`,{taux_reussite:t});await loadAll();}
   catch(e){alert(e.message);}
+}
+
+// ════════════════════════════════════════════════════════════════
+// EXPORT EXCEL — BASE CLIENTS
+// ════════════════════════════════════════════════════════════════
+function exportBaseClientsExcel(){
+  const year=today().getFullYear();
+
+  // Build unified list (same logic as renderBaseClients but all tiers)
+  const allSocietes=new Set([...prospects.map(p=>p.societe),...invoices.map(i=>i.client)]);
+  const rows=[];
+
+  for(const societe of allSocietes){
+    const invs=invoices.filter(i=>i.client.toLowerCase()===societe.toLowerCase());
+    const pros=prospects.filter(p=>p.societe.toLowerCase()===societe.toLowerCase());
+    const isClient=invs.length>0;
+    const isProspect=pros.length>0&&pros.some(p=>!p.ferme_perdu&&p.etape&&p.etape!=='—');
+    let statut=isClient&&isProspect?'Client + Prospect':isClient?'Client':'Prospect';
+
+    const pro=pros[0]||null;
+    const activeP=pros.find(p=>!p.ferme_perdu&&p.etape&&p.etape!=='—');
+    const type=clientTypeMap[societe]||(pro&&pro.type_entreprise)||'';
+    const arrActuel=getARRContributors().filter(i=>i.client.toLowerCase()===societe.toLowerCase()).reduce((s,i)=>s+arrValue(i),0);
+    const ca=billingOnExercice(year,invs.length?invs[0].client:null);
+    const actifs=invs.filter(i=>isActive(i,today())).length;
+    const nextEnd=invs.filter(i=>invoiceStatus(i)==='active').sort((a,b)=>parseDate(a.end)-parseDate(b.end));
+
+    rows.push({
+      'Société':          societe,
+      'Statut':           statut,
+      'Type':             type,
+      'Genre':            pro?pro.genre||'':'',
+      'Nom':              pro&&pro.nom!=='—'?pro.nom:'',
+      'Prénom':           pro&&pro.prenom!=='—'?pro.prenom:'',
+      'Email':            pro&&pro.email!=='—'?pro.email:'',
+      'Téléphone':        pro&&pro.telephone!=='—'?pro.telephone:'',
+      'Poste':            pro&&pro.poste!=='—'?pro.poste:'',
+      'Adresse 1':        pro?pro.adresse1||'':'',
+      'Adresse 2':        pro?pro.adresse2||'':'',
+      'Code postal':      pro?pro.code_postal||'':'',
+      'Ville':            pro?pro.ville||'':'',
+      'Pays':             pro?pro.pays||'':'',
+      'Site internet':    pro?pro.site_internet||'':'',
+      'URL LinkedIn':     pro?pro.url_linkedin||'':'',
+      'LinkedIn connecté':pro?pro.linkedin_connecte?'Oui':'Non':'',
+      'Décideur nom':     pro?pro.decideur_nom||'':'',
+      'Décideur prénom':  pro?pro.decideur_prenom||'':'',
+      'Décideur fonction':pro?pro.decideur_fonction||'':'',
+      'Décideur email':   pro?pro.decideur_email||'':'',
+      'Décideur tél':     pro?pro.decideur_tel||'':'',
+      'Source du pipe':   activeP?activeP.source_pipe||'':'',
+      'Événement':        activeP?activeP.evenement||'':'',
+      'Étape':            activeP?activeP.etape||'':'',
+      'Potentiel licences':activeP?activeP.potentiel_licences||'':'',
+      'Potentiel ARR (€)':activeP?activeP.potentiel_arr||'':'',
+      'Closing prévu':    activeP&&activeP.closing_date?fmtD(activeP.closing_date):'',
+      'ARR actuel (€)':   arrActuel||'',
+      'CA exercice (€)':  Math.round(ca)||'',
+      'Contrats actifs':  actifs||'',
+      'Prochain renouvellement': nextEnd.length?fmtD(nextEnd[0].end):'',
+      'Commentaire':      pro?pro.commentaire||'':'',
+      'Fermé/Perdu':      pro?pro.ferme_perdu?'Oui':'Non':'',
+      'Motif perte':      pro?pro.motif_perte||'':'',
+    });
+  }
+
+  if(!rows.length){alert('Aucune donnée à exporter.');return;}
+
+  // Build CSV (Excel-compatible UTF-8 with BOM)
+  const headers=Object.keys(rows[0]);
+  const csvLines=[
+    '\uFEFF' + headers.map(h=>`"${h}"`).join(';'),
+    ...rows.map(r=>headers.map(h=>`"${String(r[h]||'').replace(/"/g,'""')}"`).join(';'))
+  ];
+  const blob=new Blob([csvLines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`eclid_base_clients_${today().getFullYear()}-${String(today().getMonth()+1).padStart(2,'0')}-${String(today().getDate()).padStart(2,'0')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ════════════════════════════════════════════════════════════════
