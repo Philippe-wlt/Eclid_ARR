@@ -720,6 +720,33 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
   </div>
 </div>
 
+<!-- MODAL MODIFICATION ÉVÉNEMENT -->
+<div class="modal-overlay" id="modal-edit-event">
+  <div class="modal" style="max-width:440px;">
+    <h3>Modifier l'événement</h3>
+    <div class="modal-subtitle" id="edit-event-subtitle"></div>
+    <div class="form-grid" style="margin-bottom:0;">
+      <div class="form-group">
+        <label>Nom</label>
+        <input type="text" id="ee-name">
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="ee-date">
+      </div>
+      <div class="form-group">
+        <label>Coût (€)</label>
+        <input type="number" id="ee-cout" min="0" step="0.01" placeholder="0">
+      </div>
+    </div>
+    <span id="ee-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-edit-event')">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmEditEvent()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div class="page-loader" id="page-loader">
   <div class="spinner"></div>
   <div class="loader-text" id="loader-text">Chargement…</div>
@@ -1690,7 +1717,10 @@ function renderSettings(){
         ${e.date_evenement?`<span style="font-size:11px;color:var(--muted);">${new Date(e.date_evenement).toLocaleDateString('fr-FR')}</span>`:''}
         ${e.cout?`<span style="font-size:11px;font-weight:600;color:var(--orange);">Coût : ${new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(e.cout)}</span>`:''}
       </span>
-      <button class="btn btn-danger btn-sm" onclick="removeEvenement('${esc(e.name)}')">Supprimer</button>
+      <div class="btn-row">
+        <button class="btn btn-edit btn-sm" onclick="openEditEvent('${esc(e.name)}')">Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="removeEvenement('${esc(e.name)}')">Supprimer</button>
+      </div>
     </div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun événement.</div>';
   // Motifs non-renouvellement
   const mnrl=document.getElementById('motifs-nonrenew-list');
@@ -1999,6 +2029,34 @@ async function addMotifNonRenew(){const v=document.getElementById('new-motif-non
 async function removeMotifNonRenew(n){if(!confirm(`Supprimer le motif "${n}" ?`))return;showLoader('…');try{await sbDelete('motifs_non_renouvellement',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addEvenement(){const v=document.getElementById('new-event-input').value.trim(),dt=document.getElementById('new-event-date').value,cout=parseFloat(document.getElementById('new-event-cout').value)||0,err=document.getElementById('event-error');if(!v){err.textContent='Saisissez un nom.';return;}if(evenements.find(e=>e.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('evenements',{name:v,date_evenement:dt||null,cout:cout||null,ordre:evenements.length+1});document.getElementById('new-event-input').value='';document.getElementById('new-event-date').value='';document.getElementById('new-event-cout').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeEvenement(n){if(!confirm(`Supprimer l'événement "${n}" ?`))return;showLoader('…');try{await sbDelete('evenements',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
+
+function openEditEvent(name){
+  const ev=evenements.find(e=>e.name===name);
+  if(!ev)return;
+  document.getElementById('edit-event-subtitle').textContent=name;
+  document.getElementById('ee-name').value=ev.name;
+  document.getElementById('ee-date').value=ev.date_evenement||'';
+  document.getElementById('ee-cout').value=ev.cout||'';
+  document.getElementById('ee-error').textContent='';
+  document.getElementById('modal-edit-event').classList.add('open');
+  document.getElementById('modal-edit-event').dataset.original=name;
+}
+
+async function confirmEditEvent(){
+  const modal=document.getElementById('modal-edit-event');
+  const originalName=modal.dataset.original;
+  const newName=document.getElementById('ee-name').value.trim();
+  const newDate=document.getElementById('ee-date').value||null;
+  const newCout=parseFloat(document.getElementById('ee-cout').value)||null;
+  const err=document.getElementById('ee-error');
+  if(!newName){err.textContent='Le nom est obligatoire.';return;}
+  closeModal('modal-edit-event');
+  showLoader('Mise à jour…');
+  try{
+    await sbPatch('evenements',`name=eq.${encodeURIComponent(originalName)}`,{name:newName,date_evenement:newDate,cout:newCout});
+    await loadAll();
+  }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
 async function removeClientType(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('client_type_map',`type_name=eq.${encodeURIComponent(n)}`);await sbDelete('client_types',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addInvoiceType(){const v=document.getElementById('new-invtype-input').value.trim(),arr=document.getElementById('new-invtype-arr').checked,err=document.getElementById('invtype-error');if(!v){err.textContent='Saisissez un nom.';return;}if(invoiceTypes.find(t=>t.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('invoice_types',{name:v,counts_arr:arr});document.getElementById('new-invtype-input').value='';document.getElementById('new-invtype-arr').checked=false;await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeInvoiceType(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('invoice_types',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
