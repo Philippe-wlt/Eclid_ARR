@@ -357,6 +357,7 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
       <thead><tr>
         <th>Événement</th><th>Source</th><th>Nb prospects</th><th>Licences pot.</th>
         <th>ARR brut</th><th>ARR pondéré</th>
+        <th>Clients signés</th><th>ARR signé</th><th>Clients perdus</th><th>Coût événement</th>
       </tr></thead>
       <tbody id="pa-event-tbody"></tbody>
     </table>
@@ -536,6 +537,7 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
         <div class="add-type-row" style="flex-wrap:wrap;gap:8px;">
           <input type="text" id="new-event-input" placeholder="Nom de l'événement" style="flex:2;min-width:140px;">
           <input type="date" id="new-event-date" style="width:150px;">
+          <input type="number" id="new-event-cout" placeholder="Coût (€)" min="0" step="0.01" style="width:110px;">
           <button class="btn btn-primary" onclick="addEvenement()">Ajouter</button>
         </div>
         <span id="event-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
@@ -780,7 +782,7 @@ async function loadAll(){
     etapesRelation=rEt;
     motifsPerte=rMP.map(r=>r.name);
     motifsNonRenew=rMNR.map(r=>r.name);
-    evenements=rEv;
+    evenements=rEv; // { name, date_evenement, ordre, cout }
     prospectProblematiques={};
     rPbM.forEach(r=>{if(!prospectProblematiques[r.prospect_id])prospectProblematiques[r.prospect_id]=[];prospectProblematiques[r.prospect_id].push(r.problematique);});
     setSyncStatus('ok','✓ Synchronisé');
@@ -1258,30 +1260,61 @@ function renderPipeAnalyse(){
   }
 
   // ── PAR ÉVÉNEMENT ──
+  // Clients signés et perdus issus de cet événement
+  // Un client signé = prospect avec evenement X dont la société apparaît dans les factures actives
+  // Un client perdu = prospect ferme_perdu avec cet événement
+  const clientSocietes=new Set(invoices.filter(i=>isActive(i,today())).map(i=>i.client.toLowerCase()));
+
   const byEvent={};
+  // Actifs
   for(const p of ap){
     if(!p.evenement)continue;
     const ev=p.evenement;
-    if(!byEvent[ev])byEvent[ev]={source:p.source_pipe||'—',count:0,licences:0,arrBrut:0,arrPond:0};
+    if(!byEvent[ev])byEvent[ev]={source:p.source_pipe||'—',count:0,licences:0,arrBrut:0,arrPond:0,signes:0,arrSigne:0,perdus:0};
     byEvent[ev].count++;
     byEvent[ev].licences+=(p.potentiel_licences||0);
     byEvent[ev].arrBrut+=(p.potentiel_arr||0);
     byEvent[ev].arrPond+=(p.potentiel_arr||0)*getEtapeTaux(p.etape);
   }
+  // Signés : prospects (actifs ou non) de cet événement dont la société est client facturé actif
+  for(const p of prospects){
+    if(!p.evenement||p.ferme_perdu)continue;
+    if(!clientSocietes.has(p.societe.toLowerCase()))continue;
+    const ev=p.evenement;
+    if(!byEvent[ev])byEvent[ev]={source:p.source_pipe||'—',count:0,licences:0,arrBrut:0,arrPond:0,signes:0,arrSigne:0,perdus:0};
+    byEvent[ev].signes++;
+    byEvent[ev].arrSigne+=getARRContributors().filter(i=>i.client.toLowerCase()===p.societe.toLowerCase()).reduce((s,i)=>s+arrValue(i),0);
+  }
+  // Perdus
+  for(const p of prospects){
+    if(!p.evenement||!p.ferme_perdu)continue;
+    const ev=p.evenement;
+    if(!byEvent[ev])byEvent[ev]={source:p.source_pipe||'—',count:0,licences:0,arrBrut:0,arrPond:0,signes:0,arrSigne:0,perdus:0};
+    byEvent[ev].perdus++;
+  }
+
   const eventTbody=document.getElementById('pa-event-tbody');
   if(!Object.keys(byEvent).length){
-    eventTbody.innerHTML=`<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎪</div>Aucun prospect associé à un événement</div></td></tr>`;
+    eventTbody.innerHTML=`<tr><td colspan="10"><div class="empty"><div class="empty-icon">🎪</div>Aucun prospect associé à un événement</div></td></tr>`;
   } else {
     eventTbody.innerHTML=Object.entries(byEvent)
       .sort((a,b)=>b[1].arrPond-a[1].arrPond)
-      .map(([ev,d])=>`<tr>
-        <td><strong>${esc(ev)}</strong></td>
-        <td><span class="tag type">${esc(d.source)}</span></td>
-        <td>${d.count}</td>
-        <td>${d.licences||'—'}</td>
-        <td class="mono">${fmt(d.arrBrut)}</td>
-        <td class="mono text-green"><strong>${fmt(d.arrPond)}</strong></td>
-      </tr>`).join('');
+      .map(([ev,d])=>{
+        const evData=evenements.find(e=>e.name===ev);
+        const cout=evData&&evData.cout?evData.cout:null;
+        return`<tr>
+          <td><strong>${esc(ev)}</strong>${evData&&evData.date_evenement?`<br><span style="font-size:11px;color:var(--muted);">${new Date(evData.date_evenement).toLocaleDateString('fr-FR')}</span>`:''}</td>
+          <td><span class="tag type">${esc(d.source)}</span></td>
+          <td>${d.count}</td>
+          <td>${d.licences||'—'}</td>
+          <td class="mono">${fmt(d.arrBrut)}</td>
+          <td class="mono text-green"><strong>${fmt(d.arrPond)}</strong></td>
+          <td>${d.signes>0?`<span style="font-weight:700;color:var(--green);">✓ ${d.signes}</span>${d.arrSigne?` <span class="mono" style="font-size:11px;color:var(--green);">${fmt(d.arrSigne)}</span>`:''}`:' <span style="color:var(--muted);">0</span>'}</td>
+          <td class="mono">${d.arrSigne?fmt(d.arrSigne):'—'}</td>
+          <td>${d.perdus>0?`<span style="font-weight:700;color:var(--red);">${d.perdus}</span>`:'<span style="color:var(--muted);">0</span>'}</td>
+          <td class="mono">${cout?`<span style="color:var(--orange);font-weight:600;">${fmt(cout)}</span>`:'—'}</td>
+        </tr>`;
+      }).join('');
   }
 }
 
@@ -1652,7 +1685,11 @@ function renderSettings(){
   const evl=document.getElementById('evenements-list');
   evl.innerHTML=evenements.length?evenements.map(e=>`
     <div class="type-item">
-      <span><strong>${esc(e.name)}</strong>${e.date_evenement?` <span style="font-size:11px;color:var(--muted);">${new Date(e.date_evenement).toLocaleDateString('fr-FR')}</span>`:''}</span>
+      <span style="display:flex;align-items:center;gap:12px;flex:1;">
+        <strong>${esc(e.name)}</strong>
+        ${e.date_evenement?`<span style="font-size:11px;color:var(--muted);">${new Date(e.date_evenement).toLocaleDateString('fr-FR')}</span>`:''}
+        ${e.cout?`<span style="font-size:11px;font-weight:600;color:var(--orange);">Coût : ${new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(e.cout)}</span>`:''}
+      </span>
       <button class="btn btn-danger btn-sm" onclick="removeEvenement('${esc(e.name)}')">Supprimer</button>
     </div>`).join(''):'<div style="color:var(--muted);font-size:13px;">Aucun événement.</div>';
   // Motifs non-renouvellement
@@ -1960,7 +1997,7 @@ async function addMotifPerte(){const v=document.getElementById('new-motif-perte-
 async function removeMotifPerte(n){if(!confirm(`Supprimer le motif "${n}" ?`))return;showLoader('…');try{await sbDelete('motifs_perte_prospect',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addMotifNonRenew(){const v=document.getElementById('new-motif-nonrenew-input').value.trim(),err=document.getElementById('motif-nonrenew-error');if(!v){err.textContent='Saisissez un motif.';return;}if(motifsNonRenew.includes(v)){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('motifs_non_renouvellement',{name:v,ordre:motifsNonRenew.length+1});document.getElementById('new-motif-nonrenew-input').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeMotifNonRenew(n){if(!confirm(`Supprimer le motif "${n}" ?`))return;showLoader('…');try{await sbDelete('motifs_non_renouvellement',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
-async function addEvenement(){const v=document.getElementById('new-event-input').value.trim(),dt=document.getElementById('new-event-date').value,err=document.getElementById('event-error');if(!v){err.textContent='Saisissez un nom.';return;}if(evenements.find(e=>e.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('evenements',{name:v,date_evenement:dt||null,ordre:evenements.length+1});document.getElementById('new-event-input').value='';document.getElementById('new-event-date').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
+async function addEvenement(){const v=document.getElementById('new-event-input').value.trim(),dt=document.getElementById('new-event-date').value,cout=parseFloat(document.getElementById('new-event-cout').value)||0,err=document.getElementById('event-error');if(!v){err.textContent='Saisissez un nom.';return;}if(evenements.find(e=>e.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('evenements',{name:v,date_evenement:dt||null,cout:cout||null,ordre:evenements.length+1});document.getElementById('new-event-input').value='';document.getElementById('new-event-date').value='';document.getElementById('new-event-cout').value='';await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeEvenement(n){if(!confirm(`Supprimer l'événement "${n}" ?`))return;showLoader('…');try{await sbDelete('evenements',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function removeClientType(n){if(!confirm(`Supprimer "${n}" ?`))return;showLoader('…');try{await sbDelete('client_type_map',`type_name=eq.${encodeURIComponent(n)}`);await sbDelete('client_types',`name=eq.${encodeURIComponent(n)}`);await loadAll();}catch(e){alert(e.message);hideLoader();}}
 async function addInvoiceType(){const v=document.getElementById('new-invtype-input').value.trim(),arr=document.getElementById('new-invtype-arr').checked,err=document.getElementById('invtype-error');if(!v){err.textContent='Saisissez un nom.';return;}if(invoiceTypes.find(t=>t.name.toLowerCase()===v.toLowerCase())){err.textContent='Existe déjà.';return;}err.textContent='';showLoader('…');try{await sbPost('invoice_types',{name:v,counts_arr:arr});document.getElementById('new-invtype-input').value='';document.getElementById('new-invtype-arr').checked=false;await loadAll();}catch(e){alert(e.message);hideLoader();}}
