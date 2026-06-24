@@ -278,14 +278,8 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     </select>
     <input type="text" id="filter-search" placeholder="Rechercher…" oninput="renderProspects()" style="min-width:160px;">
   </div>
-  <div class="table-wrap"><table>
-    <thead><tr>
-      <th>Société</th><th>Contact</th><th>Type</th><th>Étape</th>
-      <th>Licences pot.</th><th>ARR pot.</th><th>CA exercice pot.</th>
-      <th>Closing</th><th>Commentaire</th><th>Statut</th><th></th>
-    </tr></thead>
-    <tbody id="prospects-tbody"></tbody>
-  </table></div>
+  <!-- LISTES PAR ÉTAPE -->
+  <div id="prospects-by-stage"></div>
 
   <!-- CAMEMBERT MOTIFS REFUS + LISTE -->
   <div class="pipe-section" id="refus-section" style="display:none;">
@@ -1123,28 +1117,61 @@ function renderProspects(){
     return true;
   });
 
-  const tbody=document.getElementById('prospects-tbody');
-  if(!list.length){tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="empty-icon">🎯</div>Aucun prospect trouvé</div></td></tr>`;}
-  else{tbody.innerHTML=list.map(p=>{
-    const ca=prospectCAExercice(p);
-    const taux=getEtapeTaux(p.etape);
-    const ferme=p.ferme_perdu;
-    return`<tr class="${ferme?'ferme-row':''}">
-      <td><strong>${esc(p.societe)}</strong></td>
-      <td>${esc(p.prenom)} ${esc(p.nom)}<br><span style="font-size:11px;color:var(--muted);">${esc(p.email)}</span></td>
-      <td><span class="tag type">${esc(p.type_entreprise||'—')}</span></td>
-      <td>${p.etape?`<span style="font-size:12px;font-weight:600;">${esc(p.etape)}</span><br><span style="font-size:10px;color:var(--green);">${Math.round(taux*100)}%</span>`:'—'}</td>
-      <td>${p.potentiel_licences||'—'}</td>
-      <td class="mono">${p.potentiel_arr&&!ferme?fmt(p.potentiel_arr):'<span class="no-arr-badge">exclu</span>'}</td>
-      <td class="mono">${ca&&!ferme?fmt(ca):'<span class="no-arr-badge">exclu</span>'}</td>
-      <td>${p.closing_date?fmtD(p.closing_date):'—'}</td>
-      <td style="max-width:160px;font-size:12px;color:var(--muted2);">${p.commentaire?esc(p.commentaire).replace(/\n/g,'<br>'):'<span style="color:var(--border);">—</span>'}</td>
-      <td>${ferme?`<span class="tag ferme">Fermé/Perdu${p.motif_perte?` · ${esc(p.motif_perte)}`:''}</span>`:'<span class="tag active">Actif</span>'}</td>
-      <td><div class="btn-row">
-        <button class="btn btn-edit btn-sm" onclick="openProspectModal('${p.id}')">Modifier</button>
-        <button class="btn btn-danger btn-sm" onclick="askDeleteProspect('${p.id}')">Suppr.</button>
-      </div></td></tr>`;
-  }).join('');}
+  // Grouper par étape, dans l'ordre défini dans les paramètres (etapesRelation est trié par "ordre")
+  const groups={};
+  for(const p of list){
+    const key=p.etape&&p.etape!=='—'&&p.etape!==''?p.etape:'Sans étape';
+    if(!groups[key])groups[key]=[];
+    groups[key].push(p);
+  }
+  // Ordre = celui de etapesRelation (déjà trié par ordre croissant au chargement) + étapes inconnues à la fin
+  const orderedKeys=etapesRelation.map(e=>e.name).filter(n=>groups[n]);
+  Object.keys(groups).forEach(k=>{if(!orderedKeys.includes(k))orderedKeys.push(k);});
+
+  const container=document.getElementById('prospects-by-stage');
+  if(!orderedKeys.length){
+    container.innerHTML=`<div class="empty"><div class="empty-icon">🎯</div>Aucun prospect trouvé</div>`;
+  } else {
+    container.innerHTML=orderedKeys.map(stageName=>{
+      const stageList=groups[stageName];
+      const etapeObj=etapesRelation.find(e=>e.name===stageName);
+      const taux=etapeObj?etapeObj.taux_reussite:null;
+      const stageArrBrut=stageList.reduce((s,p)=>s+(p.ferme_perdu?0:(p.potentiel_arr||0)),0);
+      const rows=stageList.map(p=>{
+        const ca=prospectCAExercice(p);
+        const pTaux=getEtapeTaux(p.etape);
+        const ferme=p.ferme_perdu;
+        return`<tr class="${ferme?'ferme-row':''}">
+          <td><strong>${esc(p.societe)}</strong></td>
+          <td>${esc(p.prenom)} ${esc(p.nom)}<br><span style="font-size:11px;color:var(--muted);">${esc(p.email)}</span></td>
+          <td><span class="tag type">${esc(p.type_entreprise||'—')}</span></td>
+          <td>${p.potentiel_licences||'—'}</td>
+          <td class="mono">${p.potentiel_arr&&!ferme?fmt(p.potentiel_arr):'<span class="no-arr-badge">exclu</span>'}</td>
+          <td class="mono">${ca&&!ferme?fmt(ca):'<span class="no-arr-badge">exclu</span>'}</td>
+          <td>${p.closing_date?fmtD(p.closing_date):'—'}</td>
+          <td style="max-width:160px;font-size:12px;color:var(--muted2);">${p.commentaire?esc(p.commentaire).replace(/\n/g,'<br>'):'<span style="color:var(--border);">—</span>'}</td>
+          <td>${ferme?`<span class="tag ferme">Fermé/Perdu${p.motif_perte?` · ${esc(p.motif_perte)}`:''}</span>`:'<span class="tag active">Actif</span>'}</td>
+          <td><div class="btn-row">
+            <button class="btn btn-edit btn-sm" onclick="openProspectModal('${p.id}')">Modifier</button>
+            <button class="btn btn-danger btn-sm" onclick="askDeleteProspect('${p.id}')">Suppr.</button>
+          </div></td></tr>`;
+      }).join('');
+      return`<div class="pipe-section" style="margin-bottom:20px;">
+        <div class="pipe-section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <span>${esc(stageName)} <span style="font-size:13px;font-weight:400;color:var(--muted);">— ${stageList.length} prospect(s)${taux!=null?` · ${taux}% réussite`:''}</span></span>
+          ${stageArrBrut?`<span style="font-size:14px;font-weight:700;color:var(--accent);">ARR brut : ${fmt(stageArrBrut)}</span>`:''}
+        </div>
+        <div class="table-wrap" style="margin-bottom:0;"><table>
+          <thead><tr>
+            <th>Société</th><th>Contact</th><th>Type</th>
+            <th>Licences pot.</th><th>ARR pot.</th><th>CA exercice pot.</th>
+            <th>Closing</th><th>Commentaire</th><th>Statut</th><th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div>`;
+    }).join('');
+  }
 
   // Camembert + liste fermés
   const fermes=prospects.filter(p=>p.ferme_perdu&&p.motif_perte);
