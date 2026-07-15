@@ -464,21 +464,30 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 
 <!-- ═══ TODO ═══ -->
 <div class="screen" id="screen-todos">
-  <div class="section-header" style="margin-bottom:20px;">
+  <div class="section-header" style="margin-bottom:16px;">
     <h2 class="section-title" style="margin-bottom:0;">Todo list</h2>
-    <button class="btn btn-primary" onclick="openTodoModal()">＋ Nouvelle tâche</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-secondary" id="btn-show-faites" onclick="toggleShowFaites()" style="font-size:12px;">
+        📋 Voir les tâches réalisées
+      </button>
+      <button class="btn btn-primary" onclick="openTodoModal()">＋ Nouvelle tâche</button>
+    </div>
   </div>
 
-  <div class="filter-bar" style="margin-bottom:20px;">
-    <select id="todo-filter-statut" onchange="renderTodos()">
-      <option value="actif">Tâches à faire</option>
-      <option value="tous">Toutes (incl. faites)</option>
-      <option value="fait">Faites uniquement</option>
-    </select>
+  <div class="filter-bar" style="margin-bottom:16px;">
     <input type="text" id="todo-filter-search" placeholder="Rechercher…" oninput="renderTodos()" style="min-width:160px;">
   </div>
 
+  <!-- Tâches à faire -->
   <div id="todos-container"></div>
+
+  <!-- Tâches réalisées (masquées par défaut) -->
+  <div id="todos-faites-container" style="display:none;margin-top:24px;">
+    <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--green);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(22,162,103,.2);">
+      ✓ Tâches réalisées
+    </div>
+    <div id="todos-faites-list"></div>
+  </div>
 </div>
 
 <!-- ═══ SETTINGS ═══ -->
@@ -2321,26 +2330,20 @@ function fmtWeekTitle(mondayStr){
 }
 
 function renderTodos(){
-  const statutF=document.getElementById('todo-filter-statut').value;
   const search=(document.getElementById('todo-filter-search').value||'').toLowerCase();
   const todayStr=today().toISOString().slice(0,10);
 
-  let list=todos.filter(t=>{
-    if(statutF==='actif'&&t.fait)return false;
-    if(statutF==='fait'&&!t.fait)return false;
+  const all=todos.filter(t=>{
     if(search&&!`${t.mission||''} ${t.societe||''}`.toLowerCase().includes(search))return false;
     return true;
   });
 
-  const container=document.getElementById('todos-container');
-  if(!list.length){
-    container.innerHTML=`<div class="empty"><div class="empty-icon">✅</div>Aucune tâche trouvée</div>`;
-    return;
-  }
+  const actives=all.filter(t=>!t.fait);
+  const faites=all.filter(t=>t.fait);
 
-  // Group by week — overdue first (separate block)
-  const overdue=list.filter(t=>!t.fait&&t.echeance<todayStr);
-  const upcoming=list.filter(t=>t.fait||t.echeance>=todayStr);
+  // ── TÂCHES À FAIRE (overdue + par semaine) ──
+  const overdue=actives.filter(t=>t.echeance<todayStr);
+  const upcoming=actives.filter(t=>t.echeance>=todayStr);
 
   const byWeek={};
   for(const t of upcoming){
@@ -2351,16 +2354,12 @@ function renderTodos(){
   const sortedWeeks=Object.keys(byWeek).sort();
 
   let html='';
-
-  // Overdue block
   if(overdue.length){
     html+=`<div class="week-block" style="border-color:rgba(201,58,58,.3);">
       <div class="week-title overdue">⚠ Tâches en retard <span style="font-size:13px;font-weight:400;">(${overdue.length})</span></div>
       ${overdue.map(t=>todoItemHTML(t,todayStr)).join('')}
     </div>`;
   }
-
-  // By week
   for(const wk of sortedWeeks){
     const items=byWeek[wk];
     html+=`<div class="week-block">
@@ -2368,8 +2367,29 @@ function renderTodos(){
       ${items.map(t=>todoItemHTML(t,todayStr)).join('')}
     </div>`;
   }
+  if(!actives.length) html=`<div class="empty"><div class="empty-icon">✅</div>Toutes les tâches sont réalisées !</div>`;
 
-  container.innerHTML=html;
+  document.getElementById('todos-container').innerHTML=html;
+
+  // ── TÂCHES RÉALISÉES ──
+  const faitesContainer=document.getElementById('todos-faites-list');
+  if(!faites.length){
+    faitesContainer.innerHTML=`<div class="empty" style="padding:20px;"><div class="empty-icon">📋</div>Aucune tâche réalisée</div>`;
+  } else {
+    faitesContainer.innerHTML=faites.map(t=>todoItemHTML(t,todayStr)).join('');
+  }
+
+  // Update button label
+  const btn=document.getElementById('btn-show-faites');
+  const shown=document.getElementById('todos-faites-container').style.display!=='none';
+  btn.textContent=shown?`📋 Masquer les réalisées (${faites.length})`:`📋 Voir les réalisées (${faites.length})`;
+}
+
+function toggleShowFaites(){
+  const container=document.getElementById('todos-faites-container');
+  const shown=container.style.display!=='none';
+  container.style.display=shown?'none':'block';
+  renderTodos();
 }
 
 function todoItemHTML(t,todayStr){
@@ -2391,7 +2411,10 @@ function todoItemHTML(t,todayStr){
   }
 
   return`<div class="todo-item${t.fait?' done':''}${isOverdue?' overdue-item':''}">
-    <input type="checkbox" class="todo-check" ${t.fait?'checked':''} onchange="toggleTodo('${t.id}',this.checked)">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;font-size:12px;font-weight:600;color:var(--muted2);white-space:nowrap;">
+      <input type="checkbox" class="todo-check" ${t.fait?'checked':''} onchange="toggleTodo('${t.id}',this.checked)">
+      ${t.fait?'<span style="color:var(--green);">Fait ✓</span>':'<span>À faire</span>'}
+    </label>
     <div class="todo-content">
       <div class="todo-mission">${esc(t.mission)}</div>
       <div class="todo-meta">
