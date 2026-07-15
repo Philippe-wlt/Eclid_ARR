@@ -478,15 +478,44 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     <input type="text" id="todo-filter-search" placeholder="Rechercher…" oninput="renderTodos()" style="min-width:160px;">
   </div>
 
-  <!-- Tâches à faire -->
-  <div id="todos-container"></div>
+  <!-- Layout : calendrier à gauche, tâches à droite -->
+  <div style="display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start;">
 
-  <!-- Tâches réalisées (masquées par défaut) -->
-  <div id="todos-faites-container" style="display:none;margin-top:24px;">
-    <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--green);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(22,162,103,.2);">
-      ✓ Tâches réalisées
+    <!-- CALENDRIER -->
+    <div style="position:sticky;top:80px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;user-select:none;">
+        <!-- Navigation mois -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <button class="btn btn-secondary btn-sm" onclick="calPrevMonth()">‹</button>
+          <span id="cal-month-label" style="font-family:'DM Serif Display',serif;font-size:15px;"></span>
+          <button class="btn btn-secondary btn-sm" onclick="calNextMonth()">›</button>
+        </div>
+        <!-- Jours de la semaine -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
+          ${['L','M','M','J','V','S','D'].map(d=>`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">${d}</div>`).join('')}
+        </div>
+        <!-- Grille jours -->
+        <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
+        <!-- Légende -->
+        <div style="margin-top:10px;font-size:10px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;">
+          <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(47,109,224,.15);display:inline-block;"></span>À faire</span>
+          <span style="display:flex;align-items:center;gap:3px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(201,58,58,.2);display:inline-block;"></span>Retard</span>
+        </div>
+      </div>
     </div>
-    <div id="todos-faites-list"></div>
+
+    <!-- TÂCHES -->
+    <div>
+      <div id="todos-container"></div>
+      <!-- Tâches réalisées (masquées par défaut) -->
+      <div id="todos-faites-container" style="display:none;margin-top:24px;">
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--green);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid rgba(22,162,103,.2);">
+          ✓ Tâches réalisées
+        </div>
+        <div id="todos-faites-list"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2317,6 +2346,91 @@ function exportBaseClientsExcel(){
 // TODO LIST
 // ════════════════════════════════════════════════════════════════
 
+// État du calendrier
+let calYear=today().getFullYear();
+let calMonth=today().getMonth(); // 0-based
+
+function calPrevMonth(){
+  calMonth--;
+  if(calMonth<0){calMonth=11;calYear--;}
+  renderCalendar();
+}
+function calNextMonth(){
+  calMonth++;
+  if(calMonth>11){calMonth=0;calYear++;}
+  renderCalendar();
+}
+
+function renderCalendar(){
+  const label=document.getElementById('cal-month-label');
+  if(!label)return;
+  const mois=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  label.textContent=`${mois[calMonth]} ${calYear}`;
+
+  // Compter les tâches actives par date
+  const tasksByDay={};
+  const overdueByDay={};
+  const todayStr=today().toISOString().slice(0,10);
+  for(const t of todos){
+    if(t.fait)continue;
+    const d=t.echeance;
+    if(!d)continue;
+    const isOv=d<todayStr;
+    if(isOv){overdueByDay[d]=(overdueByDay[d]||0)+1;}
+    else{tasksByDay[d]=(tasksByDay[d]||0)+1;}
+  }
+
+  // Construire la grille
+  const firstDay=new Date(calYear,calMonth,1);
+  const lastDay=new Date(calYear,calMonth+1,0);
+  const startDow=firstDay.getDay(); // 0=dim
+  // Lundi = premier jour : décalage
+  const offset=(startDow===0?6:startDow-1);
+
+  const grid=document.getElementById('cal-grid');
+  if(!grid)return;
+  let html='';
+
+  // Cases vides avant le 1er
+  for(let i=0;i<offset;i++) html+=`<div></div>`;
+
+  for(let d=1;d<=lastDay.getDate();d++){
+    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=dateStr===todayStr;
+    const nOv=overdueByDay[dateStr]||0;
+    const nOk=tasksByDay[dateStr]||0;
+    const n=nOv+nOk;
+
+    let bg='transparent', color='var(--text)', fontW='400', border='none';
+    if(isToday){border='2px solid var(--accent)';}
+    if(nOv>0){bg='rgba(201,58,58,.18)';color='var(--red)';fontW='700';}
+    else if(nOk>0){bg='rgba(47,109,224,.13)';color='var(--accent)';fontW='700';}
+
+    html+=`<div onclick="calClickDay('${dateStr}')" style="
+      text-align:center;font-size:11px;padding:4px 2px;border-radius:5px;
+      cursor:${n>0?'pointer':'default'};background:${bg};color:${color};
+      font-weight:${fontW};border:${border};position:relative;min-height:28px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      transition:background 0.1s;" title="${n>0?n+' tâche'+(n>1?'s':''):''}">
+      <span>${d}</span>
+      ${n>0?`<span style="font-size:9px;line-height:1;">${n}</span>`:''}
+    </div>`;
+  }
+  grid.innerHTML=html;
+}
+
+function calClickDay(dateStr){
+  // Naviguer vers la semaine contenant ce jour dans la liste des tâches
+  const el=document.querySelector(`[data-week="${getWeekKey(dateStr)}"]`);
+  if(el){el.scrollIntoView({behavior:'smooth',block:'start'});}
+  else{
+    // Filtrer sur ce jour dans le champ recherche
+    const d=parseDate(dateStr);
+    document.getElementById('todo-filter-search').value=fmtD(dateStr);
+    renderTodos();
+  }
+}
+
 function prospectTodoCount(prospectId){
   return todos.filter(t=>t.prospect_id===prospectId&&!t.fait).length;
 }
@@ -2482,14 +2596,14 @@ function renderTodos(){
 
   let html='';
   if(overdue.length){
-    html+=`<div class="week-block" style="border-color:rgba(201,58,58,.3);">
+    html+=`<div class="week-block" style="border-color:rgba(201,58,58,.3);" data-week="overdue">
       <div class="week-title overdue">⚠ Tâches en retard <span style="font-size:13px;font-weight:400;">(${overdue.length})</span></div>
       ${overdue.map(t=>todoItemHTML(t,todayStr)).join('')}
     </div>`;
   }
   for(const wk of sortedWeeks){
     const items=byWeek[wk];
-    html+=`<div class="week-block">
+    html+=`<div class="week-block" data-week="${wk}">
       <div class="week-title">${fmtWeekTitle(wk)} <span style="font-size:13px;font-weight:400;color:var(--muted);">(${items.length} tâche${items.length>1?'s':''})</span></div>
       ${items.map(t=>todoItemHTML(t,todayStr)).join('')}
     </div>`;
@@ -2498,7 +2612,7 @@ function renderTodos(){
 
   document.getElementById('todos-container').innerHTML=html;
 
-  // ── TÂCHES RÉALISÉES ──
+  // Tâches réalisées
   const faitesContainer=document.getElementById('todos-faites-list');
   if(!faites.length){
     faitesContainer.innerHTML=`<div class="empty" style="padding:20px;"><div class="empty-icon">📋</div>Aucune tâche réalisée</div>`;
@@ -2506,10 +2620,13 @@ function renderTodos(){
     faitesContainer.innerHTML=faites.map(t=>todoItemHTML(t,todayStr)).join('');
   }
 
-  // Update button label
+  // Bouton label
   const btn=document.getElementById('btn-show-faites');
   const shown=document.getElementById('todos-faites-container').style.display!=='none';
   btn.textContent=shown?`📋 Masquer les réalisées (${faites.length})`:`📋 Voir les réalisées (${faites.length})`;
+
+  // Mettre à jour le calendrier
+  renderCalendar();
 }
 
 function toggleShowFaites(){
