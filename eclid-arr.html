@@ -143,6 +143,23 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 .pie-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
 .churn-section{background:rgba(201,58,58,.04);border:1px solid rgba(201,58,58,.15);border-radius:14px;padding:20px;margin-bottom:24px;}
 .churn-title{font-family:'DM Serif Display',serif;font-size:17px;margin-bottom:14px;color:var(--red);padding-bottom:10px;border-bottom:1px solid rgba(201,58,58,.15);}
+/* TODO */
+.week-block{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px;}
+.week-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--text);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.week-title.overdue{color:var(--red);border-bottom-color:rgba(201,58,58,.2);background:rgba(201,58,58,.03);margin:-20px -20px 14px;padding:14px 20px;border-radius:14px 14px 0 0;}
+.todo-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;margin-bottom:6px;transition:background 0.1s;border:1px solid var(--border);}
+.todo-item:hover{background:var(--surface2);}
+.todo-item.done{opacity:.5;}
+.todo-item.overdue-item{border-color:rgba(201,58,58,.25);background:rgba(201,58,58,.03);}
+.todo-check{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+.todo-content{flex:1;min-width:0;}
+.todo-mission{font-size:13px;font-weight:600;color:var(--text);}
+.todo-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.todo-date{font-size:11px;font-weight:600;white-space:nowrap;}
+.todo-date.overdue{color:var(--red);}
+.todo-date.today{color:var(--orange);}
+.todo-date.ok{color:var(--green);}
+.todo-prospect{font-size:11px;font-weight:600;color:var(--accent);}
 .page-loader{display:none;position:fixed;inset:0;background:rgba(244,246,250,.8);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
 .page-loader.active{display:flex;}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
@@ -166,6 +183,7 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     <button class="nav-btn" onclick="showScreen('pipe-analyse',this)">Analyse</button>
     <div class="nav-sep"></div>
     <button class="nav-btn" onclick="showScreen('base-clients',this)">👥 Base clients</button>
+    <button class="nav-btn" onclick="showScreen('todos',this)">✅ Todo</button>
     <div class="nav-sep"></div>
     <button class="nav-btn" onclick="showScreen('settings',this)">⚙ Paramètres</button>
   </nav>
@@ -444,6 +462,25 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
   </div>
 </div>
 
+<!-- ═══ TODO ═══ -->
+<div class="screen" id="screen-todos">
+  <div class="section-header" style="margin-bottom:20px;">
+    <h2 class="section-title" style="margin-bottom:0;">Todo list</h2>
+    <button class="btn btn-primary" onclick="openTodoModal()">＋ Nouvelle tâche</button>
+  </div>
+
+  <div class="filter-bar" style="margin-bottom:20px;">
+    <select id="todo-filter-statut" onchange="renderTodos()">
+      <option value="actif">Tâches à faire</option>
+      <option value="tous">Toutes (incl. faites)</option>
+      <option value="fait">Faites uniquement</option>
+    </select>
+    <input type="text" id="todo-filter-search" placeholder="Rechercher…" oninput="renderTodos()" style="min-width:160px;">
+  </div>
+
+  <div id="todos-container"></div>
+</div>
+
 <!-- ═══ SETTINGS ═══ -->
 <div class="screen" id="screen-settings">
   <h2 class="section-title">Paramètres</h2>
@@ -714,6 +751,51 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
   </div>
 </div>
 
+<!-- MODAL TODO -->
+<div class="modal-overlay" id="modal-todo">
+  <div class="modal" style="max-width:500px;">
+    <h3 id="todo-modal-title">Nouvelle tâche</h3>
+    <div class="modal-subtitle">Associez cette tâche à un prospect et définissez une échéance</div>
+    <div class="form-grid" style="margin-bottom:14px;">
+      <div class="form-group" style="grid-column:1/-1;">
+        <label>Mission / Tâche <span class="req">*</span></label>
+        <textarea id="td-mission" rows="2" placeholder="Ex : Envoyer la proposition commerciale, Relancer après démo…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Société ou contact</label>
+        <div class="ac-wrap">
+          <input type="text" id="td-prospect-search" placeholder="Nom de société ou contact…" autocomplete="off"
+            oninput="todoAcInput(this)" onblur="setTimeout(()=>document.getElementById('td-ac').classList.remove('open'),150)">
+          <div class="ac-dropdown" id="td-ac"></div>
+        </div>
+        <input type="hidden" id="td-prospect-id">
+        <div id="td-prospect-display" style="font-size:11px;color:var(--accent);margin-top:4px;"></div>
+      </div>
+      <div class="form-group">
+        <label>Date d'échéance <span class="req">*</span></label>
+        <input type="date" id="td-echeance">
+      </div>
+    </div>
+    <span id="todo-error" style="color:var(--red);font-size:12px;display:block;margin-bottom:8px;"></span>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-todo')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveTodo()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SUPPRESSION TODO -->
+<div class="modal-overlay" id="modal-delete-todo">
+  <div class="modal">
+    <h3>Supprimer la tâche ?</h3>
+    <p id="modal-delete-todo-msg"></p>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete-todo')">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmDeleteTodo()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL MODIFICATION ÉVÉNEMENT -->
 <div class="modal-overlay" id="modal-edit-event">
   <div class="modal" style="max-width:440px;">
@@ -762,8 +844,8 @@ async function sbUpsert(t,b){const r=await fetch(SB_URL+'/'+t,{method:'POST',hea
 let invoices=[],clientTypes=[],invoiceTypes=[],clientTypeMap={};
 let prospects=[],prospectProblematiques={};
 let problematiques=[],sourcesPipe=[],etapesRelation=[];
-let motifsPerte=[],motifsNonRenew=[],evenements=[];
-let deleteTarget=null,editTarget=null,prospectEditId=null,deleteProspectTarget=null;
+let motifsPerte=[],motifsNonRenew=[],evenements=[],todos=[];
+let deleteTarget=null,editTarget=null,prospectEditId=null,deleteProspectTarget=null,deleteTodoTarget=null,editTodoId=null;
 
 // ────────────────────────────────────────────────────────────────
 // LOADER & STATUT DE CONNEXION
@@ -779,7 +861,7 @@ async function loadAll(){
   showLoader('Chargement des données…');
   setSyncStatus('loading','⟳ Connexion…');
   try{
-    const [rInv,rCT,rCTM,rIT,rPr,rPb,rPbM,rLR,rEt,rMP,rMNR,rEv]=await Promise.all([
+    const [rInv,rCT,rCTM,rIT,rPr,rPb,rPbM,rLR,rEt,rMP,rMNR,rEv,rTodos]=await Promise.all([
       sbGet('invoices','select=*&order=start_date.desc'),
       sbGet('client_types','select=name&order=name.asc'),
       sbGet('client_type_map','select=*'),
@@ -792,6 +874,7 @@ async function loadAll(){
       sbGet('motifs_perte_prospect','select=name&order=ordre.asc'),
       sbGet('motifs_non_renouvellement','select=name&order=ordre.asc'),
       sbGet('evenements','select=*&order=ordre.asc'),
+      sbGet('todos','select=*&order=echeance.asc'),
     ]);
     invoices=rInv.map(r=>({id:r.id,num:r.num,client:r.client,qty:r.qty,price:r.price,start:r.start_date,end:r.end_date,invType:r.inv_type||'',tauxRenouvellement:r.taux_renouvellement??100,motifNonRenouvele:r.motif_non_renouvellement||''}));
     clientTypes=rCT.map(r=>r.name);
@@ -804,6 +887,7 @@ async function loadAll(){
     motifsPerte=rMP.map(r=>r.name);
     motifsNonRenew=rMNR.map(r=>r.name);
     evenements=rEv; // { name, date_evenement, ordre, cout }
+    todos=rTodos;
     prospectProblematiques={};
     rPbM.forEach(r=>{if(!prospectProblematiques[r.prospect_id])prospectProblematiques[r.prospect_id]=[];prospectProblematiques[r.prospect_id].push(r.problematique);});
     setSyncStatus('ok','✓ Synchronisé');
@@ -863,7 +947,7 @@ function activeProspects(){
 // ════════════════════════════════════════════════════════════════
 // RENDU — ORCHESTRATION GÉNÉRALE
 // ════════════════════════════════════════════════════════════════
-function renderAll(){renderDashboard();renderClients();renderRenewals();renderAllInvoices();renderProspects();renderPipeAnalyse();renderChurn();renderBaseClients();renderSettings();populateTypeSelects();}
+function renderAll(){renderDashboard();renderClients();renderRenewals();renderAllInvoices();renderProspects();renderPipeAnalyse();renderChurn();renderBaseClients();renderTodos();renderSettings();populateTypeSelects();}
 
 // ────────────────────────────────────────────────────────────────
 // GRAPHIQUE CAMEMBERT
@@ -2212,6 +2296,201 @@ function exportBaseClientsExcel(){
 }
 
 // ════════════════════════════════════════════════════════════════
+// TODO LIST
+// ════════════════════════════════════════════════════════════════
+
+function getWeekKey(dateStr){
+  const d=parseDate(dateStr);
+  const day=d.getDay();
+  const monday=new Date(d);
+  monday.setDate(d.getDate()-(day===0?6:day-1));
+  return monday.toISOString().slice(0,10);
+}
+function mondayOfWeek(dateStr){
+  return getWeekKey(dateStr);
+}
+function sundayOfWeek(dateStr){
+  const m=parseDate(mondayOfWeek(dateStr));
+  m.setDate(m.getDate()+6);
+  return m;
+}
+function fmtWeekTitle(mondayStr){
+  const mon=parseDate(mondayStr);
+  const sun=new Date(mon);sun.setDate(mon.getDate()+6);
+  return`Semaine du ${fmtD(mondayStr)} au ${fmtD(sun.toISOString().slice(0,10))}`;
+}
+
+function renderTodos(){
+  const statutF=document.getElementById('todo-filter-statut').value;
+  const search=(document.getElementById('todo-filter-search').value||'').toLowerCase();
+  const todayStr=today().toISOString().slice(0,10);
+
+  let list=todos.filter(t=>{
+    if(statutF==='actif'&&t.fait)return false;
+    if(statutF==='fait'&&!t.fait)return false;
+    if(search&&!`${t.mission||''} ${t.societe||''}`.toLowerCase().includes(search))return false;
+    return true;
+  });
+
+  const container=document.getElementById('todos-container');
+  if(!list.length){
+    container.innerHTML=`<div class="empty"><div class="empty-icon">✅</div>Aucune tâche trouvée</div>`;
+    return;
+  }
+
+  // Group by week — overdue first (separate block)
+  const overdue=list.filter(t=>!t.fait&&t.echeance<todayStr);
+  const upcoming=list.filter(t=>t.fait||t.echeance>=todayStr);
+
+  const byWeek={};
+  for(const t of upcoming){
+    const wk=getWeekKey(t.echeance);
+    if(!byWeek[wk])byWeek[wk]=[];
+    byWeek[wk].push(t);
+  }
+  const sortedWeeks=Object.keys(byWeek).sort();
+
+  let html='';
+
+  // Overdue block
+  if(overdue.length){
+    html+=`<div class="week-block" style="border-color:rgba(201,58,58,.3);">
+      <div class="week-title overdue">⚠ Tâches en retard <span style="font-size:13px;font-weight:400;">(${overdue.length})</span></div>
+      ${overdue.map(t=>todoItemHTML(t,todayStr)).join('')}
+    </div>`;
+  }
+
+  // By week
+  for(const wk of sortedWeeks){
+    const items=byWeek[wk];
+    html+=`<div class="week-block">
+      <div class="week-title">${fmtWeekTitle(wk)} <span style="font-size:13px;font-weight:400;color:var(--muted);">(${items.length} tâche${items.length>1?'s':''})</span></div>
+      ${items.map(t=>todoItemHTML(t,todayStr)).join('')}
+    </div>`;
+  }
+
+  container.innerHTML=html;
+}
+
+function todoItemHTML(t,todayStr){
+  const isOverdue=!t.fait&&t.echeance<todayStr;
+  const isToday=t.echeance===todayStr;
+  const dateClass=isOverdue?'overdue':isToday?'today':'ok';
+  const prospect=t.prospect_id?prospects.find(p=>p.id===t.prospect_id):null;
+  const societe=t.societe||(prospect?prospect.societe:'')||'';
+  return`<div class="todo-item${t.fait?' done':''}${isOverdue?' overdue-item':''}">
+    <input type="checkbox" class="todo-check" ${t.fait?'checked':''} onchange="toggleTodo('${t.id}',this.checked)">
+    <div class="todo-content">
+      <div class="todo-mission">${esc(t.mission)}</div>
+      <div class="todo-meta">
+        ${societe?`<span class="todo-prospect">👤 ${esc(societe)}</span> · `:''}
+        Échéance : <span class="todo-date ${dateClass}">${fmtD(t.echeance)}${isOverdue?' ⚠':isToday?' (aujourd\'hui)':''}</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-edit btn-sm" onclick="openTodoModal('${t.id}')">Modifier</button>
+      <button class="btn btn-danger btn-sm" onclick="askDeleteTodo('${t.id}')">Suppr.</button>
+    </div>
+  </div>`;
+}
+
+function openTodoModal(id){
+  editTodoId=id||null;
+  document.getElementById('todo-modal-title').textContent=id?'Modifier la tâche':'Nouvelle tâche';
+  document.getElementById('td-mission').value='';
+  document.getElementById('td-prospect-search').value='';
+  document.getElementById('td-prospect-id').value='';
+  document.getElementById('td-prospect-display').textContent='';
+  document.getElementById('td-echeance').value='';
+  document.getElementById('todo-error').textContent='';
+  if(id){
+    const t=todos.find(x=>x.id===id);
+    if(!t)return;
+    document.getElementById('td-mission').value=t.mission||'';
+    document.getElementById('td-echeance').value=t.echeance||'';
+    if(t.societe)document.getElementById('td-prospect-search').value=t.societe;
+    if(t.prospect_id){document.getElementById('td-prospect-id').value=t.prospect_id;document.getElementById('td-prospect-display').textContent='✓ '+t.societe;}
+  }
+  document.getElementById('modal-todo').classList.add('open');
+}
+
+async function saveTodo(){
+  const mission=document.getElementById('td-mission').value.trim();
+  const echeance=document.getElementById('td-echeance').value;
+  const prospectId=document.getElementById('td-prospect-id').value||null;
+  // Si un prospect est lié, sa société est utilisée ; sinon on prend le texte libre
+  const societe=document.getElementById('td-prospect-search').value.trim()||null;
+  const err=document.getElementById('todo-error');
+  if(!mission){err.textContent='La mission est obligatoire.';return;}
+  if(!echeance){err.textContent="La date d'échéance est obligatoire.";return;}
+  const id=editTodoId;
+  closeModal('modal-todo');
+  showLoader('Enregistrement…');
+  try{
+    const body={mission,echeance,prospect_id:prospectId,societe};
+    if(id){await sbPatch('todos',`id=eq.${id}`,body);}
+    else{await sbPost('todos',body);}
+    await loadAll();
+  }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
+
+async function toggleTodo(id,fait){
+  try{await sbPatch('todos',`id=eq.${id}`,{fait});await loadAll();}
+  catch(e){alert('Erreur : '+e.message);}
+}
+
+function askDeleteTodo(id){
+  deleteTodoTarget=id;
+  const t=todos.find(x=>x.id===id);
+  document.getElementById('modal-delete-todo-msg').textContent=`Supprimer la tâche "${t.mission}" ? Cette action est irréversible.`;
+  document.getElementById('modal-delete-todo').classList.add('open');
+}
+async function confirmDeleteTodo(){
+  const id=deleteTodoTarget;
+  closeModal('modal-delete-todo');
+  showLoader('Suppression…');
+  try{await sbDelete('todos',`id=eq.${id}`);await loadAll();}
+  catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
+
+function todoAcInput(input){
+  const q=input.value.trim();
+  const drop=document.getElementById('td-ac');
+  // Si l'utilisateur tape librement, on efface le lien prospect
+  document.getElementById('td-prospect-id').value='';
+  document.getElementById('td-prospect-display').textContent='';
+  if(!q){drop.classList.remove('open');drop.innerHTML='';return;}
+  // Chercher dans tous les prospects (actifs + clients) par société ou nom/prénom contact
+  const all=[...activeProspects(),...prospects.filter(p=>p.est_client&&(!p.etape||p.etape==='—'))];
+  const seen=new Set();
+  const matches=all.filter(p=>{
+    if(seen.has(p.id))return false;
+    seen.add(p.id);
+    const haystack=`${p.societe} ${p.nom||''} ${p.prenom||''}`.toLowerCase();
+    return haystack.includes(q.toLowerCase());
+  });
+  if(!matches.length){drop.classList.remove('open');drop.innerHTML='';return;}
+  drop.innerHTML=matches.slice(0,8).map(p=>{
+    const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    const label=p.nom&&p.nom!=='—'?`${p.societe} — ${p.prenom} ${p.nom}`:p.societe;
+    return`<div class="ac-item" data-id="${p.id}" data-societe="${esc(p.societe)}" data-label="${esc(label)}"
+      onmousedown="todoAcPick(event)">${label.replace(re,'<mark>$1</mark>')}</div>`;
+  }).join('');
+  drop.classList.add('open');
+}
+function todoAcPick(e){
+  e.preventDefault();
+  const id=e.currentTarget.dataset.id;
+  const societe=e.currentTarget.dataset.societe;
+  const label=e.currentTarget.dataset.label;
+  document.getElementById('td-prospect-id').value=id;
+  document.getElementById('td-prospect-search').value=societe;
+  document.getElementById('td-prospect-display').textContent='✓ Lié à : '+label;
+  document.getElementById('td-ac').classList.remove('open');
+  document.getElementById('td-ac').innerHTML='';
+}
+
+// ════════════════════════════════════════════════════════════════
 // NAVIGATION & MODALES
 // ════════════════════════════════════════════════════════════════
 function showScreen(id,btn){
@@ -2221,7 +2500,7 @@ function showScreen(id,btn){
   btn.classList.add('active');
   renderAll();
 }
-function closeModal(id){document.getElementById(id).classList.remove('open');deleteTarget=null;editTarget=null;prospectEditId=null;deleteProspectTarget=null;}
+function closeModal(id){document.getElementById(id).classList.remove('open');deleteTarget=null;editTarget=null;prospectEditId=null;deleteProspectTarget=null;deleteTodoTarget=null;editTodoId=null;}
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
 
 // ────────────────────────────────────────────────────────────────
