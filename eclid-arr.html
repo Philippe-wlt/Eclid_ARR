@@ -241,7 +241,7 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 <div class="screen" id="screen-renewals">
   <h2 class="section-title">Prochaines dates de renouvellement</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th>Client</th><th>Type</th><th>N° Facture</th><th>Date de fin</th><th>Jours restants</th><th>Montant facturé</th><th>ARR</th><th>Alerte</th></tr></thead>
+    <thead><tr><th>Client</th><th>Type</th><th>N° Facture</th><th>Date de fin</th><th>Jours restants</th><th>Montant facturé</th><th>ARR</th><th>Alerte</th><th></th></tr></thead>
     <tbody id="renewals-tbody"></tbody>
   </table></div>
 </div>
@@ -1125,13 +1125,16 @@ function renderClients(){
 function renderRenewals(){
   const active=invoices.filter(i=>invoiceStatus(i)==='active').sort((a,b)=>parseDate(a.end)-parseDate(b.end));
   const tbody=document.getElementById('renewals-tbody');
-  if(!active.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔄</div>Aucun contrat actif</div></td></tr>`;return;}
+  if(!active.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">🔄</div>Aucun contrat actif</div></td></tr>`;return;}
   tbody.innerHTML=active.map(inv=>{
     const days=daysUntilEnd(inv);
     const badge=days<=30?`<span class="renewal-badge urgent">⚠ ${days} j</span>`:days<=90?`<span class="renewal-badge soon">⏳ ${days} j</span>`:`<span class="renewal-badge ok">✓ ${days} j</span>`;
     return`<tr><td><strong>${esc(inv.client)}</strong></td><td><span class="tag type">${esc(clientType(inv.client))}</span></td>
       <td class="mono">${esc(inv.num)}</td><td>${fmtD(inv.end)}</td><td>${days} jours</td>
-      <td class="mono">${fmt(invoiceAmount(inv))}</td><td class="mono text-accent">${fmt(arrValue(inv))}</td><td>${badge}</td></tr>`;
+      <td class="mono">${fmt(invoiceAmount(inv))}</td><td class="mono text-accent">${fmt(arrValue(inv))}</td>
+      <td>${badge}</td>
+      <td><button class="btn btn-sm" style="background:rgba(47,109,224,.1);color:var(--accent);border:1px solid rgba(47,109,224,.2);white-space:nowrap;" onclick="openTodoFromRenewal('${esc(inv.client)}','${esc(inv.num)}','${inv.end}')">＋ Tâche</button></td>
+    </tr>`;
   }).join('');
 }
 
@@ -2316,6 +2319,27 @@ function exportBaseClientsExcel(){
 
 function prospectTodoCount(prospectId){
   return todos.filter(t=>t.prospect_id===prospectId&&!t.fait).length;
+}
+
+function openTodoFromRenewal(client,numFacture,dateEcheance){
+  // Naviguer vers l'onglet Todo
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-todos').classList.add('active');
+  document.querySelector('.nav-btn[onclick*="todos"]').classList.add('active');
+  // Ouvrir la modale todo pré-remplie
+  openTodoModal();
+  // Pré-remplir le client et la mission
+  document.getElementById('td-prospect-search').value=client;
+  document.getElementById('td-mission').value=`Renouvellement contrat ${numFacture}`;
+  document.getElementById('td-echeance').value=dateEcheance;
+  // Tenter de lier au prospect correspondant
+  const prospect=prospects.find(p=>p.societe.toLowerCase()===client.toLowerCase());
+  if(prospect){
+    document.getElementById('td-prospect-id').value=prospect.id;
+    const lbl=prospect.nom&&prospect.nom!=='—'?`${client} — ${(prospect.prenom||'').trim()} ${(prospect.nom||'').trim()}`.trim():client;
+    document.getElementById('td-prospect-display').textContent='✓ Lié à : '+lbl;
+  }
 }
 
 function showTodosForProspect(prospectId,societe){
