@@ -180,10 +180,10 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     <div class="nav-sep"></div>
     <span class="nav-cat">Pipe</span>
     <button class="nav-btn" onclick="showScreen('prospects',this)">Prospects</button>
+    <button class="nav-btn" onclick="showScreen('todos',this)">✅ Todo</button>
     <button class="nav-btn" onclick="showScreen('pipe-analyse',this)">Analyse</button>
     <div class="nav-sep"></div>
     <button class="nav-btn" onclick="showScreen('base-clients',this)">👥 Base clients</button>
-    <button class="nav-btn" onclick="showScreen('todos',this)">✅ Todo</button>
     <div class="nav-sep"></div>
     <button class="nav-btn" onclick="showScreen('settings',this)">⚙ Paramètres</button>
   </nav>
@@ -2378,14 +2378,27 @@ function todoItemHTML(t,todayStr){
   const dateClass=isOverdue?'overdue':isToday?'today':'ok';
   const prospect=t.prospect_id?prospects.find(p=>p.id===t.prospect_id):null;
   const societe=t.societe||(prospect?prospect.societe:'')||'';
+
+  // Contact details from linked prospect
+  let contactHtml='';
+  if(prospect&&prospect.nom&&prospect.nom!=='—'){
+    const parts=[];
+    if(prospect.prenom||prospect.nom) parts.push(`<span style="font-weight:600;">${esc((prospect.prenom||'')+' '+(prospect.nom||'')).trim()}</span>`);
+    if(prospect.email&&prospect.email!=='—') parts.push(`<a href="mailto:${esc(prospect.email)}" style="color:var(--accent);text-decoration:none;">✉ ${esc(prospect.email)}</a>`);
+    if(prospect.telephone&&prospect.telephone!=='—') parts.push(`<a href="tel:${esc(prospect.telephone)}" style="color:var(--muted2);text-decoration:none;">📞 ${esc(prospect.telephone)}</a>`);
+    if(prospect.url_linkedin) parts.push(`<a href="${esc(prospect.url_linkedin)}" target="_blank" style="color:#0a66c2;text-decoration:none;">🔗 LinkedIn</a>`);
+    if(parts.length) contactHtml=`<div style="font-size:11px;margin-top:4px;display:flex;flex-wrap:wrap;gap:10px;">${parts.join('')}</div>`;
+  }
+
   return`<div class="todo-item${t.fait?' done':''}${isOverdue?' overdue-item':''}">
     <input type="checkbox" class="todo-check" ${t.fait?'checked':''} onchange="toggleTodo('${t.id}',this.checked)">
     <div class="todo-content">
       <div class="todo-mission">${esc(t.mission)}</div>
       <div class="todo-meta">
         ${societe?`<span class="todo-prospect">👤 ${esc(societe)}</span> · `:''}
-        Échéance : <span class="todo-date ${dateClass}">${fmtD(t.echeance)}${isOverdue?' ⚠':isToday?' (aujourd\'hui)':''}</span>
+        Échéance : <span class="todo-date ${dateClass}">${fmtD(t.echeance)}${isOverdue?' ⚠':isToday?" (aujourd'hui)":''}</span>
       </div>
+      ${contactHtml}
     </div>
     <div class="btn-row">
       <button class="btn btn-edit btn-sm" onclick="openTodoModal('${t.id}')">Modifier</button>
@@ -2408,8 +2421,16 @@ function openTodoModal(id){
     if(!t)return;
     document.getElementById('td-mission').value=t.mission||'';
     document.getElementById('td-echeance').value=t.echeance||'';
-    if(t.societe)document.getElementById('td-prospect-search').value=t.societe;
-    if(t.prospect_id){document.getElementById('td-prospect-id').value=t.prospect_id;document.getElementById('td-prospect-display').textContent='✓ '+t.societe;}
+    const prospect=t.prospect_id?prospects.find(p=>p.id===t.prospect_id):null;
+    const societe=t.societe||(prospect?prospect.societe:'')||'';
+    if(societe)document.getElementById('td-prospect-search').value=societe;
+    if(t.prospect_id){
+      document.getElementById('td-prospect-id').value=t.prospect_id;
+      // Show societe + contact name in confirm display
+      let lbl=societe;
+      if(prospect&&prospect.nom&&prospect.nom!=='—') lbl+=` — ${(prospect.prenom||'').trim()} ${(prospect.nom||'').trim()}`.trim();
+      document.getElementById('td-prospect-display').textContent='✓ Lié à : '+lbl;
+    }
   }
   document.getElementById('modal-todo').classList.add('open');
 }
