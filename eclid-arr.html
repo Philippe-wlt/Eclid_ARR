@@ -2355,6 +2355,7 @@ function exportBaseClientsExcel(){
 // État du calendrier
 let calYear=today().getFullYear();
 let calMonth=today().getMonth(); // 0-based
+let calSelectedDay=null; // date ISO sélectionnée
 
 function calPrevMonth(){
   calMonth--;
@@ -2409,7 +2410,8 @@ function renderCalendar(){
 
     let bg='transparent', color='var(--text)', fontW='400', border='none';
     if(isToday){border='2px solid var(--accent)';}
-    if(nOv>0){bg='rgba(201,58,58,.18)';color='var(--red)';fontW='700';}
+    if(dateStr===calSelectedDay){bg='var(--accent)';color='#fff';fontW='700';}
+    else if(nOv>0){bg='rgba(201,58,58,.18)';color='var(--red)';fontW='700';}
     else if(nOk>0){bg='rgba(47,109,224,.13)';color='var(--accent)';fontW='700';}
 
     html+=`<div onclick="calClickDay('${dateStr}')" style="
@@ -2426,15 +2428,17 @@ function renderCalendar(){
 }
 
 function calClickDay(dateStr){
-  // Naviguer vers la semaine contenant ce jour dans la liste des tâches
-  const el=document.querySelector(`[data-week="${getWeekKey(dateStr)}"]`);
-  if(el){el.scrollIntoView({behavior:'smooth',block:'start'});}
-  else{
-    // Filtrer sur ce jour dans le champ recherche
+  // Toggle : cliquer sur la même date désélectionne
+  if(calSelectedDay===dateStr){
+    calSelectedDay=null;
+  } else {
+    calSelectedDay=dateStr;
+    // Naviguer vers le mois de la date cliquée
     const d=parseDate(dateStr);
-    document.getElementById('todo-filter-search').value=fmtD(dateStr);
-    renderTodos();
+    calYear=d.getFullYear();
+    calMonth=d.getMonth();
   }
+  renderTodos(); // re-render filtre + calendrier
 }
 
 function prospectTodoCount(prospectId){
@@ -2581,6 +2585,7 @@ function renderTodos(){
   const todayStr=today().toISOString().slice(0,10);
 
   const all=todos.filter(t=>{
+    if(calSelectedDay&&t.echeance!==calSelectedDay)return false;
     if(search&&!`${t.mission||''} ${t.societe||''}`.toLowerCase().includes(search))return false;
     return true;
   });
@@ -2601,6 +2606,15 @@ function renderTodos(){
   const sortedWeeks=Object.keys(byWeek).sort();
 
   let html='';
+
+  // Bandeau filtre jour actif
+  if(calSelectedDay){
+    html+=`<div style="background:rgba(47,109,224,.08);border:1px solid rgba(47,109,224,.2);border-radius:10px;padding:8px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+      <span>📅 Tâches du <strong>${fmtD(calSelectedDay)}</strong></span>
+      <button class="btn btn-sm btn-secondary" onclick="calSelectedDay=null;renderTodos();">✕ Voir tout</button>
+    </div>`;
+  }
+
   if(overdue.length){
     html+=`<div class="week-block" style="border-color:rgba(201,58,58,.3);" data-week="overdue">
       <div class="week-title overdue">⚠ Tâches en retard <span style="font-size:13px;font-weight:400;">(${overdue.length})</span></div>
