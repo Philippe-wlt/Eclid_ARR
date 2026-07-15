@@ -741,9 +741,14 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     </div>
     <div style="background:rgba(47,109,224,.06);border:1px solid rgba(47,109,224,.15);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted2);margin-bottom:8px;" id="p-ca-preview"></div>
     <span id="prospect-error" style="color:var(--red);font-size:12px;display:block;margin-top:4px;"></span>
-    <div class="modal-btns">
-      <button class="btn btn-secondary" onclick="closeModal('modal-prospect')">Annuler</button>
-      <button class="btn btn-primary" onclick="saveProspect()">Enregistrer</button>
+    <div class="modal-btns" style="justify-content:space-between;">
+      <button class="btn btn-secondary" style="background:rgba(47,109,224,.08);color:var(--accent);border:1px solid rgba(47,109,224,.2);" onclick="saveProspectThenTodo()">
+        ＋ Enregistrer & créer une tâche
+      </button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" onclick="closeModal('modal-prospect')">Annuler</button>
+        <button class="btn btn-primary" onclick="saveProspect()">Enregistrer</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1247,6 +1252,7 @@ function renderProspects(){
           <td><div class="btn-row">
             <button class="btn btn-edit btn-sm" onclick="openProspectModal('${p.id}')">Modifier</button>
             <button class="btn btn-danger btn-sm" onclick="askDeleteProspect('${p.id}')">Suppr.</button>
+            ${prospectTodoCount(p.id)>0?`<button class="btn btn-sm" style="background:rgba(47,109,224,.1);color:var(--accent);border:1px solid rgba(47,109,224,.2);" onclick="showTodosForProspect('${p.id}','${esc(p.societe)}')">✅ ${prospectTodoCount(p.id)}</button>`:''}
           </div></td></tr>`;
       }).join('');
       return`<div class="pipe-section" style="margin-bottom:20px;">
@@ -2307,6 +2313,103 @@ function exportBaseClientsExcel(){
 // ════════════════════════════════════════════════════════════════
 // TODO LIST
 // ════════════════════════════════════════════════════════════════
+
+function prospectTodoCount(prospectId){
+  return todos.filter(t=>t.prospect_id===prospectId&&!t.fait).length;
+}
+
+function showTodosForProspect(prospectId,societe){
+  // Naviguer vers l'onglet Todo et filtrer sur ce prospect
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('screen-todos').classList.add('active');
+  document.querySelector('.nav-btn[onclick*="todos"]').classList.add('active');
+  document.getElementById('todo-filter-search').value=societe;
+  renderTodos();
+}
+
+async function saveProspectThenTodo(){
+  // Valider les champs obligatoires d'abord
+  const nom=document.getElementById('p-nom').value.trim();
+  const prenom=document.getElementById('p-prenom').value.trim();
+  const email=document.getElementById('p-email').value.trim();
+  const tel=document.getElementById('p-tel').value.trim();
+  const poste=document.getElementById('p-poste').value.trim();
+  const societe=document.getElementById('p-societe').value.trim();
+  const lieu=document.getElementById('p-source').value;
+  const etape=document.getElementById('p-etape').value;
+  const genre=document.getElementById('p-genre').value||null;
+  const ferme=document.getElementById('p-ferme').checked;
+  const motifPerteEl=document.querySelector('input[name="p-motif"]:checked');
+  const motif_perte=motifPerteEl?motifPerteEl.value:null;
+  const err=document.getElementById('prospect-error');
+
+  if(!genre||!nom||!prenom||!email||!tel||!poste||!societe||!lieu||!etape){
+    err.textContent='Veuillez remplir tous les champs obligatoires avant de créer une tâche.';return;
+  }
+  if(ferme&&!motif_perte){err.textContent='Veuillez sélectionner un motif de perte.';return;}
+
+  // Sauvegarder le prospect d'abord
+  const pid=prospectEditId;
+  // Appel silencieux : on sauvegarde sans fermer la modale ni naviguer
+  err.textContent='';
+  showLoader('Enregistrement du prospect…');
+  try{
+    const adresse1=document.getElementById('p-adresse1').value.trim()||null;
+    const adresse2=document.getElementById('p-adresse2').value.trim()||null;
+    const code_postal=document.getElementById('p-cp').value.trim()||null;
+    const ville=document.getElementById('p-ville').value.trim()||null;
+    const pays=document.getElementById('p-pays').value.trim()||null;
+    const site_internet=document.getElementById('p-site').value.trim()||null;
+    const url_linkedin=document.getElementById('p-linkedin').value.trim()||null;
+    const linkedin_connecte=document.getElementById('p-linkedin-connecte').checked;
+    const evenement=document.getElementById('p-evenement').value||null;
+    const commentaire=document.getElementById('p-commentaire').value.trim()||null;
+    const type_entreprise=document.getElementById('p-type').value;
+    const effectif=parseInt(document.getElementById('p-effectif').value)||null;
+    const licences=parseInt(document.getElementById('p-licences').value)||null;
+    const arr=parseFloat(document.getElementById('p-arr').value)||null;
+    const closing=document.getElementById('p-closing').value||null;
+    const decideur_nom=document.getElementById('p-d-nom').value.trim()||null;
+    const decideur_prenom=document.getElementById('p-d-prenom').value.trim()||null;
+    const decideur_fonction=document.getElementById('p-d-fonction').value.trim()||null;
+    const decideur_email=document.getElementById('p-d-email').value.trim()||null;
+    const decideur_tel=document.getElementById('p-d-tel').value.trim()||null;
+    const selPbs=[...document.querySelectorAll('#p-problematiques input:checked')].map(c=>c.value);
+    const body={nom,prenom,email,telephone:tel,poste,societe,effectif,
+      type_entreprise:type_entreprise||null,source_pipe:lieu,evenement:evenement||null,
+      etape,potentiel_licences:licences,potentiel_arr:arr,closing_date:closing,
+      ferme_perdu:ferme,commentaire,motif_perte:ferme?motif_perte:null,
+      decideur_nom,decideur_prenom,decideur_fonction,decideur_email,decideur_tel,
+      genre,adresse1,adresse2,code_postal,ville,pays,site_internet,url_linkedin,linkedin_connecte};
+    let finalPid=pid;
+    if(pid){
+      await sbPatch('prospects',`id=eq.${pid}`,body);
+      await sbDelete('prospect_problematiques',`prospect_id=eq.${pid}`);
+    } else {
+      const res=await sbPost('prospects',body);
+      finalPid=res[0].id;
+    }
+    if(selPbs.length)await sbPost('prospect_problematiques',selPbs.map(pb=>({prospect_id:finalPid,problematique:pb})));
+    // Recharger les données
+    const rPr=await sbGet('prospects','select=*&order=created_at.desc');
+    prospects=rPr;
+    const rTodos=await sbGet('todos','select=*&order=echeance.asc');
+    todos=rTodos;
+    hideLoader();
+    // Fermer la modale prospect et ouvrir la modale todo pré-remplie
+    closeModal('modal-prospect');
+    // Trouver l'id du prospect sauvegardé
+    const savedProspect=prospects.find(p=>p.societe===societe&&p.nom===nom&&p.prenom===prenom);
+    openTodoModal();
+    // Pré-remplir la société dans le todo
+    document.getElementById('td-prospect-search').value=societe;
+    if(savedProspect){
+      document.getElementById('td-prospect-id').value=savedProspect.id;
+      document.getElementById('td-prospect-display').textContent=`✓ Lié à : ${societe} — ${prenom} ${nom}`;
+    }
+  }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
 
 function getWeekKey(dateStr){
   const d=parseDate(dateStr);
