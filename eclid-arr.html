@@ -492,7 +492,13 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
         </div>
         <!-- Jours de la semaine -->
         <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;">
-          ${['L','M','M','J','V','S','D'].map(d=>`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">${d}</div>`).join('')}
+          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">L</div>
+          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">M</div>
+          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">M</div>
+          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">J</div>
+          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">V</div>
+          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">S</div>
+          <div style="text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0;">D</div>
         </div>
         <!-- Grille jours -->
         <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
