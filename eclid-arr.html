@@ -160,6 +160,27 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 .todo-date.today{color:var(--orange);}
 .todo-date.ok{color:var(--green);}
 .todo-prospect{font-size:11px;font-weight:600;color:var(--accent);}
+/* CONTACTS */
+.contacts-table thead th{white-space:nowrap;}
+.badge-desabonne{background:rgba(201,58,58,.1);color:var(--red);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
+.badge-invalide{background:rgba(212,136,10,.12);color:var(--orange);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
+.import-step{display:none;}.import-step.active{display:block;}
+.mapping-table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+.mapping-table th,.mapping-table td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);font-size:13px;}
+.mapping-table th{background:var(--surface2);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);}
+.mapping-table select{width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface2);color:var(--text);font-size:12px;}
+.qualite-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px;}
+.qualite-kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;transition:border-color .15s;}
+.qualite-kpi-card:hover,.qualite-kpi-card.active{border-color:var(--accent);}
+.qualite-kpi-card .q-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px;}
+.qualite-kpi-card .q-val{font-size:22px;font-weight:700;color:var(--red);}
+.dupli-card{background:var(--surface);border:1px solid var(--orange);border-radius:12px;padding:16px;margin-bottom:12px;}
+.dupli-row{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:start;}
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:border-color .15s;background:var(--surface);}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--accent);background:rgba(47,109,224,.04);}
+.drop-zone-icon{font-size:32px;margin-bottom:8px;}
+.progress-import{background:var(--border);border-radius:4px;height:8px;overflow:hidden;margin:12px 0;}
+.progress-import-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s;}
 .page-loader{display:none;position:fixed;inset:0;background:rgba(244,246,250,.8);z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
 .page-loader.active{display:flex;}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
@@ -184,6 +205,11 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     <button class="nav-btn" onclick="showScreen('pipe-analyse',this)">Analyse</button>
     <div class="nav-sep"></div>
     <button class="nav-btn" onclick="showScreen('base-clients',this)">👥 Base clients</button>
+    <div class="nav-sep"></div>
+    <span class="nav-cat">Contacts</span>
+    <button class="nav-btn" onclick="showScreen('contacts',this)">📋 Contacts</button>
+    <button class="nav-btn" onclick="showScreen('contacts-import',this)">⬆ Import</button>
+    <button class="nav-btn" onclick="showScreen('contacts-qualite',this)">🔍 Qualité</button>
     <div class="nav-sep"></div>
     <button class="nav-btn" onclick="showScreen('settings',this)">⚙ Paramètres</button>
   </nav>
@@ -522,6 +548,160 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ═══ CONTACTS ═══ -->
+<div class="screen" id="screen-contacts">
+  <div class="section-header" style="margin-bottom:14px;">
+    <h2 class="section-title" style="margin-bottom:0;">Base contacts <span id="contacts-count" style="font-size:14px;font-weight:400;color:var(--muted);"></span></h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary" style="font-size:12px;" onclick="exportContactsFromList()">⬇ Exporter la sélection</button>
+      <button class="btn btn-danger" style="font-size:12px;" onclick="purgeContacts()">🗑 Purger la base</button>
+      <button class="btn btn-primary" onclick="openContactModal()">＋ Nouveau contact</button>
+    </div>
+  </div>
+
+  <!-- FILTRES MULTI-SÉLECTION -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+      <div class="form-group">
+        <label>Type de contact</label>
+        <select id="cf-type" multiple size="4" onchange="renderContacts()" style="height:80px;"></select>
+      </div>
+      <div class="form-group">
+        <label>Région</label>
+        <select id="cf-region" multiple size="4" onchange="renderContacts()" style="height:80px;"></select>
+      </div>
+      <div class="form-group">
+        <label>Source</label>
+        <select id="cf-source" multiple size="4" onchange="renderContacts()" style="height:80px;"></select>
+      </div>
+      <div class="form-group">
+        <label>Statut email</label>
+        <select id="cf-desabonne" onchange="renderContacts()">
+          <option value="">Tous</option>
+          <option value="non">Non désabonnés</option>
+          <option value="oui">Désabonnés</option>
+        </select>
+        <select id="cf-invalide" onchange="renderContacts()" style="margin-top:6px;">
+          <option value="">Tous emails</option>
+          <option value="non">Email valide</option>
+          <option value="oui">Email invalide</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input type="text" id="cf-search" placeholder="Nom, email, société, titre…" oninput="renderContacts()" style="flex:1;min-width:200px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;">
+      <button class="btn btn-secondary btn-sm" onclick="resetContactFilters()">✕ Tout réinitialiser</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetMultiSelect('cf-type');renderContacts();" style="font-size:11px;">Type : Tous</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetMultiSelect('cf-region');renderContacts();" style="font-size:11px;">Région : Toutes</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetMultiSelect('cf-source');renderContacts();" style="font-size:11px;">Source : Toutes</button>
+      <span id="contacts-filter-info" style="font-size:12px;color:var(--muted);"></span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px;">Astuce : maintenez Ctrl (ou ⌘ sur Mac) pour sélectionner plusieurs valeurs dans une liste</div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="contacts-table">
+      <thead><tr>
+        <th>Nom</th><th>Prénom</th><th>Genre</th><th>Titre</th><th>Société</th>
+        <th>Email</th><th>Région</th><th>Type</th><th>Source</th><th>Statut</th><th></th>
+      </tr></thead>
+      <tbody id="contacts-tbody"></tbody>
+    </table>
+  </div>
+  <div id="contacts-pagination" style="display:flex;gap:8px;align-items:center;margin-top:12px;justify-content:center;"></div>
+</div>
+
+<!-- ═══ CONTACTS IMPORT ═══ -->
+<div class="screen" id="screen-contacts-import">
+  <h2 class="section-title">Import de contacts</h2>
+
+  <!-- ÉTAPE 1 : dépôt fichier -->
+  <div class="import-step active" id="import-step-1">
+    <p class="section-subtitle">Formats acceptés : .xlsx, .csv — feuille active ou première feuille</p>
+    <div class="drop-zone" id="import-drop-zone" onclick="document.getElementById('import-file-input').click()"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="handleImportDrop(event)">
+      <div class="drop-zone-icon">📂</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:4px;">Glissez votre fichier ici</div>
+      <div style="font-size:12px;color:var(--muted);">ou cliquez pour sélectionner</div>
+    </div>
+    <input type="file" id="import-file-input" accept=".xlsx,.csv" style="display:none" onchange="handleImportFile(this.files[0])">
+    <div id="import-step1-status" style="margin-top:12px;font-size:13px;color:var(--muted);"></div>
+
+    <!-- PURGE -->
+    <div style="margin-top:28px;background:rgba(201,58,58,.04);border:1px solid rgba(201,58,58,.15);border-radius:12px;padding:16px;">
+      <h3 style="font-size:15px;font-weight:600;color:var(--red);margin-bottom:6px;">🗑 Purger la base contacts</h3>
+      <p style="font-size:12px;color:var(--muted2);margin-bottom:12px;">Supprime tous les contacts pour repartir d'un import propre. Action irréversible.</p>
+      <button class="btn btn-danger" onclick="purgeContacts()">Supprimer tous les contacts</button>
+    </div>
+
+    <!-- Import mails erronés -->
+    <div style="margin-top:28px;">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:8px;">Import liste mails erronés</h3>
+      <p class="section-subtitle" style="margin-top:0;">Fichier avec une colonne contenant les emails invalides (réponses emailing)</p>
+      <div class="drop-zone" style="padding:20px;" onclick="document.getElementById('import-erreurs-input').click()">
+        <div style="font-size:13px;font-weight:600;">📧 Importer une liste de mails erronés</div>
+      </div>
+      <input type="file" id="import-erreurs-input" accept=".xlsx,.csv" style="display:none" onchange="handleImportMailsErreurs(this.files[0])">
+    </div>
+
+    <!-- Import désabonnements -->
+    <div style="margin-top:20px;">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:8px;">Import désabonnements</h3>
+      <p class="section-subtitle" style="margin-top:0;">Fichier avec une colonne contenant les emails demandant le désabonnement</p>
+      <div class="drop-zone" style="padding:20px;" onclick="document.getElementById('import-desabo-input').click()">
+        <div style="font-size:13px;font-weight:600;">🚫 Importer une liste de désabonnements</div>
+      </div>
+      <input type="file" id="import-desabo-input" accept=".xlsx,.csv" style="display:none" onchange="handleImportDesabonnements(this.files[0])">
+    </div>
+  </div>
+
+  <!-- ÉTAPE 2 : mapping colonnes -->
+  <div class="import-step" id="import-step-2">
+    <h3 style="font-size:16px;font-weight:600;margin-bottom:4px;">Table de correspondance des colonnes</h3>
+    <p class="section-subtitle" style="margin-top:0;">Associez chaque colonne de votre fichier au champ correspondant dans la base</p>
+    <div style="overflow-x:auto;">
+      <table class="mapping-table" id="mapping-table-el"></table>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-secondary" onclick="importGoStep(1)">← Retour</button>
+      <button class="btn btn-primary" onclick="importAnalyse()">Analyser les données →</button>
+    </div>
+    <div id="import-step2-status" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
+  </div>
+
+  <!-- ÉTAPE 3 : doublons + confirmation -->
+  <div class="import-step" id="import-step-3">
+    <div id="import-step3-content"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-secondary" onclick="importGoStep(2)">← Retour</button>
+      <button class="btn btn-primary" id="btn-import-confirm" onclick="confirmImport()">Importer</button>
+    </div>
+    <div class="progress-import" id="import-progress" style="display:none;"><div class="progress-import-fill" id="import-progress-fill" style="width:0%"></div></div>
+    <div id="import-step3-status" style="margin-top:8px;font-size:13px;color:var(--muted);"></div>
+  </div>
+</div>
+
+<!-- ═══ CONTACTS QUALITÉ ═══ -->
+<div class="screen" id="screen-contacts-qualite">
+  <div class="section-header" style="margin-bottom:14px;">
+    <h2 class="section-title" style="margin-bottom:0;">Qualité de la base contacts</h2>
+    <button class="btn btn-secondary" id="btn-export-qualite" onclick="exportQualite()" style="display:none;font-size:12px;">⬇ Exporter la liste</button>
+  </div>
+  <div class="qualite-kpi" id="qualite-kpi"></div>
+  <div id="qualite-filter-label" style="font-size:13px;color:var(--muted);margin-bottom:12px;"></div>
+  <div class="table-wrap">
+    <table class="contacts-table">
+      <thead><tr>
+        <th>Nom</th><th>Prénom</th><th>Société</th><th>Email</th>
+        <th>Téléphone</th><th>Région</th><th>Type</th><th>Données manquantes</th><th></th>
+      </tr></thead>
+      <tbody id="qualite-tbody"></tbody>
+    </table>
   </div>
 </div>
 
@@ -872,6 +1052,79 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
   </div>
 </div>
 
+<!-- MODAL CONTACT -->
+<div class="modal-overlay" id="modal-contact">
+  <div class="modal" style="max-width:780px;">
+    <h3 id="contact-modal-title">Nouveau contact</h3>
+    <div class="modal-subtitle">Les champs Email et Nom sont recommandés pour la détection de doublons</div>
+    <div class="form-grid-wide">
+      <div class="form-group"><label>Type de contact</label><select id="ct-type"><option value="">—</option></select></div>
+      <div class="form-group"><label>Genre</label>
+        <select id="ct-genre"><option value="">—</option><option>Monsieur</option><option>Madame</option><option>Autre</option></select>
+      </div>
+      <div class="form-group"><label>Nom</label><input type="text" id="ct-nom"></div>
+      <div class="form-group"><label>Prénom</label><input type="text" id="ct-prenom"></div>
+      <div class="form-group"><label>Titre / Fonction</label><input type="text" id="ct-titre"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="ct-email"></div>
+      <div class="form-group"><label>Téléphone</label><input type="text" id="ct-tel"></div>
+      <div class="form-group"><label>Société</label><input type="text" id="ct-societe"></div>
+      <div class="form-group"><label>Site internet</label><input type="url" id="ct-site"></div>
+      <div class="form-group"><label>URL LinkedIn</label><input type="url" id="ct-linkedin"></div>
+      <div class="form-group"><label>Adresse 1</label><input type="text" id="ct-adr1"></div>
+      <div class="form-group"><label>Adresse 2</label><input type="text" id="ct-adr2"></div>
+      <div class="form-group"><label>Adresse 3</label><input type="text" id="ct-adr3"></div>
+      <div class="form-group"><label>Code postal</label><input type="text" id="ct-cp"></div>
+      <div class="form-group"><label>Ville</label><input type="text" id="ct-ville"></div>
+      <div class="form-group"><label>Pays</label><input type="text" id="ct-pays"></div>
+      <div class="form-group"><label>Région</label><select id="ct-region"><option value="">—</option></select></div>
+      <div class="form-group"><label>Source</label><select id="ct-source"><option value="">—</option></select></div>
+    </div>
+    <div style="display:flex;gap:20px;margin-top:10px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="ct-desabonne" style="width:auto;padding:0;">
+        <span style="color:var(--red);font-weight:600;">Désabonné</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="ct-invalide" style="width:auto;padding:0;">
+        <span style="color:var(--orange);font-weight:600;">Email invalide</span>
+      </label>
+    </div>
+    <span id="contact-error" style="color:var(--red);font-size:12px;display:block;margin-top:8px;"></span>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-contact')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveContact()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DELETE CONTACT -->
+<div class="modal-overlay" id="modal-delete-contact">
+  <div class="modal">
+    <h3>Supprimer le contact ?</h3>
+    <p id="modal-delete-contact-msg"></p>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-delete-contact')">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmDeleteContact()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MAILS ERRONÉS -->
+<div class="modal-overlay" id="modal-mails-erreurs">
+  <div class="modal" style="max-width:700px;">
+    <h3>Mails erronés — validation avant traitement</h3>
+    <div class="modal-subtitle" id="erreurs-subtitle"></div>
+    <div class="table-wrap" style="max-height:350px;overflow-y:auto;margin-bottom:0;">
+      <table><thead><tr><th>Email</th><th>Contact trouvé</th><th>Action</th></tr></thead>
+      <tbody id="erreurs-tbody"></tbody></table>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-mails-erreurs')">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmMailsErreurs()">Invalider les emails cochés</button>
+    </div>
+  </div>
+</div>
+
 <div class="page-loader" id="page-loader">
   <div class="spinner"></div>
   <div class="loader-text" id="loader-text">Chargement…</div>
@@ -942,6 +1195,8 @@ async function loadAll(){
     setSyncStatus('ok','✓ Synchronisé');
     await migrateClientsToProspects();
     renderAll();
+    // Charger les contacts séparément (base volumineuse)
+    loadContacts();
   }catch(e){setSyncStatus('error','✗ Erreur');console.error(e);alert('Erreur connexion : '+e.message);}
   finally{hideLoader();}
 }
@@ -2799,6 +3054,773 @@ function todoAcPick(e){
 }
 
 // ════════════════════════════════════════════════════════════════
+// BASE CONTACTS
+// ════════════════════════════════════════════════════════════════
+
+// État contacts
+let contacts=[];
+let contactTypes=[],contactRegions=[],contactSources=[];
+let contactsPage=0;
+const CONTACTS_PER_PAGE=100;
+let editContactId=null,deleteContactId=null;
+let importData=[];       // données parsées du fichier
+let importMapped=[];     // après mapping colonnes
+let importDoublons=[];   // doublons détectés
+let importNouveaux=[];   // nouveaux à insérer
+let qualiteFilter=null;
+const CONTACT_FIELDS=[
+  {key:'type_contact',label:'Type de contact'},
+  {key:'nom',label:'Nom'},
+  {key:'prenom',label:'Prénom'},
+  {key:'genre',label:'Genre'},
+  {key:'titre',label:'Titre'},
+  {key:'email',label:'Email'},
+  {key:'telephone',label:'Téléphone'},
+  {key:'societe',label:'Société'},
+  {key:'site_internet',label:'Site internet'},
+  {key:'url_linkedin',label:'URL LinkedIn'},
+  {key:'adresse1',label:'Adresse 1'},
+  {key:'adresse2',label:'Adresse 2'},
+  {key:'adresse3',label:'Adresse 3'},
+  {key:'code_postal',label:'Code postal'},
+  {key:'ville',label:'Ville'},
+  {key:'pays',label:'Pays'},
+  {key:'region',label:'Région'},
+  {key:'source_contact',label:'Source contact'},
+  {key:'desabonne',label:'Désabonné'},
+  {key:'email_invalide',label:'Email invalide'},
+  {key:'IGNORE',label:'— Ignorer —'},
+];
+
+// Correspondance mémorisée (localStorage pour persistance inter-sessions)
+function getSavedMapping(){
+  try{return JSON.parse(localStorage.getItem('eclid_col_mapping')||'{}');}catch{return {};}
+}
+function saveMapping(m){localStorage.setItem('eclid_col_mapping',JSON.stringify(m));}
+
+// ── CHARGEMENT ────────────────────────────────────────────────
+// Charge tous les contacts en paginant par tranches de 1000
+async function fetchAllContacts(){
+  const PAGE=1000;
+  let all=[], from=0;
+  while(true){
+    const r=await fetch(
+      `${SB_URL}/contacts?select=*&order=nom.asc,prenom.asc&offset=${from}&limit=${PAGE}`,
+      {headers:HEADERS}
+    );
+    if(!r.ok) throw new Error(await r.text());
+    const batch=await r.json();
+    all=[...all,...batch];
+    if(batch.length<PAGE) break;
+    from+=PAGE;
+  }
+  return all;
+}
+
+async function loadContacts(){
+  try{
+    const [rCT,rCR,rCS]=await Promise.all([
+      sbGet('contact_types','select=name&order=ordre.asc'),
+      sbGet('contact_regions','select=name&order=name.asc'),
+      sbGet('contact_sources','select=name&order=name.asc'),
+    ]);
+    contactTypes=rCT.map(r=>r.name);
+    contactRegions=rCR.map(r=>r.name);
+    contactSources=rCS.map(r=>r.name);
+    showLoader('Chargement des contacts…');
+    contacts=await fetchAllContacts();
+    hideLoader();
+    contactsPage=0;
+    renderContacts();
+    renderQualite();
+    populateContactSelects();
+  }catch(e){hideLoader();console.error('loadContacts error:',e);}
+}
+
+async function loadContactsPage(page){
+  // Conservé pour compatibilité mais plus utilisé directement
+  contacts=await fetchAllContacts();
+  renderContacts();
+}
+
+// ── RENDU LISTE CONTACTS ──────────────────────────────────────
+function getMultiSelectValues(id){
+  const el=document.getElementById(id);
+  if(!el)return[];
+  if(el.multiple){
+    return[...el.selectedOptions].map(o=>o.value).filter(v=>v!=='');
+  }
+  return el.value?[el.value]:[];
+}
+
+function getFilteredContacts(){
+  const types=getMultiSelectValues('cf-type');
+  const regions=getMultiSelectValues('cf-region');
+  const sources=getMultiSelectValues('cf-source');
+  const desabF=document.getElementById('cf-desabonne')?.value||'';
+  const invalideF=document.getElementById('cf-invalide')?.value||'';
+  const search=(document.getElementById('cf-search')?.value||'').toLowerCase();
+  return contacts.filter(c=>{
+    if(types.length&&!types.includes(c.type_contact||''))return false;
+    if(regions.length&&!regions.includes(c.region||''))return false;
+    if(sources.length&&!sources.includes(c.source_contact||''))return false;
+    if(desabF==='oui'&&!c.desabonne)return false;
+    if(desabF==='non'&&c.desabonne)return false;
+    if(invalideF==='oui'&&!c.email_invalide)return false;
+    if(invalideF==='non'&&c.email_invalide)return false;
+    if(search&&!`${c.nom||''} ${c.prenom||''} ${c.email||''} ${c.societe||''} ${c.titre||''}`.toLowerCase().includes(search))return false;
+    return true;
+  });
+}
+
+function resetContactFilters(){
+  ['cf-type','cf-region','cf-source'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)[...el.options].forEach(o=>o.selected=false);
+  });
+  const ds=document.getElementById('cf-desabonne');if(ds)ds.value='';
+  const inv=document.getElementById('cf-invalide');if(inv)inv.value='';
+  const s=document.getElementById('cf-search');if(s)s.value='';
+  contactsPage=0;
+  renderContacts();
+}
+
+function exportContactsFromList(){
+  const list=getFilteredContacts();
+  if(!list.length){alert('Aucun contact à exporter avec les filtres actuels.');return;}
+  const headers=['Type','Nom','Prénom','Genre','Titre','Email','Téléphone','Société','Site internet','URL LinkedIn','Adresse 1','Adresse 2','Adresse 3','Code postal','Ville','Pays','Région','Source','Désabonné','Email invalide'];
+  const rows=list.map(c=>[
+    c.type_contact||'',c.nom||'',c.prenom||'',c.genre||'',c.titre||'',c.email||'',
+    c.telephone||'',c.societe||'',c.site_internet||'',c.url_linkedin||'',
+    c.adresse1||'',c.adresse2||'',c.adresse3||'',c.code_postal||'',c.ville||'',c.pays||'',
+    c.region||'',c.source_contact||'',c.desabonne?'Oui':'Non',c.email_invalide?'Oui':'Non'
+  ]);
+  const csv='\uFEFF'+[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`eclid_contacts_${today().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+async function purgeContacts(){
+  const filtered=getFilteredContacts();
+  const n=filtered.length;
+  const total=contacts.length;
+  const isAll=n===total;
+
+  if(!n){alert('Aucun contact à supprimer avec les filtres actuels.');return;}
+
+  const msg=isAll
+    ? `⚠ Aucun filtre actif — vous allez supprimer la totalité des ${n.toLocaleString('fr-FR')} contacts.\n\nConfirmez-vous la purge complète ?`
+    : `Vous allez supprimer ${n.toLocaleString('fr-FR')} contact(s) correspondant aux filtres actifs (sur ${total.toLocaleString('fr-FR')} au total).\n\nConfirmez-vous ?`;
+
+  if(!confirm(msg))return;
+  if(isAll&&!confirm(`Dernière confirmation : supprimer définitivement ${n.toLocaleString('fr-FR')} contacts ?`))return;
+
+  showLoader('Suppression en cours…');
+  try{
+    // Supprimer par batch de 100 ids
+    const ids=filtered.map(c=>c.id);
+    const BATCH=100;
+    for(let i=0;i<ids.length;i+=BATCH){
+      const batch=ids.slice(i,i+BATCH);
+      // Utiliser in filter
+      const filter='id=in.('+batch.map(id=>encodeURIComponent(id)).join(',')+')';
+      await sbDelete('contacts',filter);
+    }
+    await reloadContactsOnly();
+    alert(`${n.toLocaleString('fr-FR')} contact(s) supprimé(s).`);
+  }catch(e){
+    setSyncStatus('error','✗ Erreur');
+    alert('Erreur lors de la purge : '+e.message);
+    hideLoader();
+  }
+}
+
+function renderContacts(){
+  populateContactFilters();
+  const filtered=getFilteredContacts();
+  const total=filtered.length;
+  document.getElementById('contacts-count').textContent=`(${total.toLocaleString('fr-FR')} contacts)`;
+  // Pagination
+  const pages=Math.ceil(total/CONTACTS_PER_PAGE);
+  if(contactsPage>=pages)contactsPage=Math.max(0,pages-1);
+  const slice=filtered.slice(contactsPage*CONTACTS_PER_PAGE,(contactsPage+1)*CONTACTS_PER_PAGE);
+  const tbody=document.getElementById('contacts-tbody');
+  if(!slice.length){
+    tbody.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="empty-icon">📋</div>Aucun contact trouvé</div></td></tr>`;
+  } else {
+    tbody.innerHTML=slice.map(c=>`<tr>
+      <td>${esc(c.nom||'—')}</td>
+      <td>${esc(c.prenom||'—')}</td>
+      <td>${esc(c.genre||'')}</td>
+      <td style="font-size:12px;">${esc(c.titre||'')}</td>
+      <td>${esc(c.societe||'')}</td>
+      <td style="font-size:12px;">${c.email?`<a href="mailto:${esc(c.email)}" style="color:var(--accent);text-decoration:none;">${esc(c.email)}</a>`:'—'}</td>
+      <td>${esc(c.region||'')}</td>
+      <td><span class="tag type" style="font-size:10px;">${esc(c.type_contact||'—')}</span></td>
+      <td style="font-size:11px;">${esc(c.source_contact||'')}</td>
+      <td>${c.desabonne?'<span class="badge-desabonne">Désabonné</span>':''}${c.email_invalide?'<span class="badge-invalide">Mail invalide</span>':''}</td>
+      <td><div class="btn-row">
+        <button class="btn btn-edit btn-sm" onclick="openContactModal('${c.id}')">Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="askDeleteContact('${c.id}')">Suppr.</button>
+      </div></td>
+    </tr>`).join('');
+  }
+  // Pagination controls
+  const pag=document.getElementById('contacts-pagination');
+  if(pages<=1){pag.innerHTML='';return;}
+  let ph=`<button class="btn btn-secondary btn-sm" ${contactsPage===0?'disabled':''} onclick="contactsPage--;renderContacts()">‹ Préc.</button>`;
+  ph+=`<span style="font-size:12px;color:var(--muted);">Page ${contactsPage+1} / ${pages}</span>`;
+  ph+=`<button class="btn btn-secondary btn-sm" ${contactsPage>=pages-1?'disabled':''} onclick="contactsPage++;renderContacts()">Suiv. ›</button>`;
+  pag.innerHTML=ph;
+}
+
+function populateContactFilters(){
+  const sets={type:new Set(),region:new Set(),source:new Set()};
+  contacts.forEach(c=>{
+    if(c.type_contact)sets.type.add(c.type_contact);
+    if(c.region)sets.region.add(c.region);
+    if(c.source_contact)sets.source.add(c.source_contact);
+  });
+  const updateMulti=(id,vals)=>{
+    const el=document.getElementById(id);if(!el)return;
+    const prev=new Set([...el.selectedOptions].map(o=>o.value));
+    el.innerHTML=[...vals].sort().map(v=>`<option value="${esc(v)}"${prev.has(v)?' selected':''}>${esc(v)}</option>`).join('');
+  };
+  updateMulti('cf-type',[...sets.type]);
+  updateMulti('cf-region',[...sets.region]);
+  updateMulti('cf-source',[...sets.source]);
+  // Info filtre
+  const filtered=getFilteredContacts();
+  const info=document.getElementById('contacts-filter-info');
+  if(info) info.textContent=filtered.length<contacts.length?`${filtered.length.toLocaleString('fr-FR')} / ${contacts.length.toLocaleString('fr-FR')} contacts`:'';
+}
+
+function populateContactSelects(){
+  // Modale
+  const ctSel=document.getElementById('ct-type');
+  if(ctSel){const c=ctSel.value;ctSel.innerHTML='<option value="">—</option>'+contactTypes.map(t=>`<option value="${esc(t)}"${t===c?' selected':''}>${esc(t)}</option>`).join('');}
+  const crSel=document.getElementById('ct-region');
+  if(crSel){const c=crSel.value;crSel.innerHTML='<option value="">—</option>'+contactRegions.map(t=>`<option value="${esc(t)}"${t===c?' selected':''}>${esc(t)}</option>`).join('');}
+  const csSel=document.getElementById('ct-source');
+  if(csSel){const c=csSel.value;csSel.innerHTML='<option value="">—</option>'+contactSources.map(t=>`<option value="${esc(t)}"${t===c?' selected':''}>${esc(t)}</option>`).join('');}
+  // Extraction
+  ['ex-type','ex-region','ex-source'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const c=el.value;
+    const list=id==='ex-type'?contactTypes:id==='ex-region'?contactRegions:contactSources;
+    el.innerHTML='<option value="">Tous</option>'+list.map(t=>`<option value="${esc(t)}"${t===c?' selected':''}>${esc(t)}</option>`).join('');
+  });
+}
+
+// ── FICHE CONTACT ──────────────────────────────────────────────
+function openContactModal(id){
+  editContactId=id||null;
+  populateContactSelects();
+  const fields=['nom','prenom','genre','titre','email','tel','societe','site','linkedin','adr1','adr2','adr3','cp','ville','pays','region','source','type'];
+  fields.forEach(f=>{ const el=document.getElementById('ct-'+f); if(el) el.value=''; });
+  document.getElementById('ct-desabonne').checked=false;
+  document.getElementById('ct-invalide').checked=false;
+  document.getElementById('contact-error').textContent='';
+  document.getElementById('contact-modal-title').textContent=id?'Modifier le contact':'Nouveau contact';
+  if(id){
+    const c=contacts.find(x=>x.id===id);
+    if(!c)return;
+    document.getElementById('ct-nom').value=c.nom||'';
+    document.getElementById('ct-prenom').value=c.prenom||'';
+    document.getElementById('ct-genre').value=c.genre||'';
+    document.getElementById('ct-titre').value=c.titre||'';
+    document.getElementById('ct-email').value=c.email||'';
+    document.getElementById('ct-tel').value=c.telephone||'';
+    document.getElementById('ct-societe').value=c.societe||'';
+    document.getElementById('ct-site').value=c.site_internet||'';
+    document.getElementById('ct-linkedin').value=c.url_linkedin||'';
+    document.getElementById('ct-adr1').value=c.adresse1||'';
+    document.getElementById('ct-adr2').value=c.adresse2||'';
+    document.getElementById('ct-adr3').value=c.adresse3||'';
+    document.getElementById('ct-cp').value=c.code_postal||'';
+    document.getElementById('ct-ville').value=c.ville||'';
+    document.getElementById('ct-pays').value=c.pays||'';
+    document.getElementById('ct-region').value=c.region||'';
+    document.getElementById('ct-source').value=c.source_contact||'';
+    document.getElementById('ct-type').value=c.type_contact||'';
+    document.getElementById('ct-desabonne').checked=c.desabonne||false;
+    document.getElementById('ct-invalide').checked=c.email_invalide||false;
+  }
+  document.getElementById('modal-contact').classList.add('open');
+}
+
+async function saveContact(){
+  const id=editContactId;
+  const body={
+    nom:document.getElementById('ct-nom').value.trim()||null,
+    prenom:document.getElementById('ct-prenom').value.trim()||null,
+    genre:document.getElementById('ct-genre').value||null,
+    titre:document.getElementById('ct-titre').value.trim()||null,
+    email:document.getElementById('ct-email').value.trim()||null,
+    telephone:document.getElementById('ct-tel').value.trim()||null,
+    societe:document.getElementById('ct-societe').value.trim()||null,
+    site_internet:document.getElementById('ct-site').value.trim()||null,
+    url_linkedin:document.getElementById('ct-linkedin').value.trim()||null,
+    adresse1:document.getElementById('ct-adr1').value.trim()||null,
+    adresse2:document.getElementById('ct-adr2').value.trim()||null,
+    adresse3:document.getElementById('ct-adr3').value.trim()||null,
+    code_postal:document.getElementById('ct-cp').value.trim()||null,
+    ville:document.getElementById('ct-ville').value.trim()||null,
+    pays:document.getElementById('ct-pays').value.trim()||null,
+    region:document.getElementById('ct-region').value||null,
+    source_contact:document.getElementById('ct-source').value||null,
+    type_contact:document.getElementById('ct-type').value||null,
+    desabonne:document.getElementById('ct-desabonne').checked,
+    email_invalide:document.getElementById('ct-invalide').checked,
+    updated_at:new Date().toISOString(),
+  };
+  closeModal('modal-contact');
+  showLoader('Enregistrement…');
+  try{
+    if(id){await sbPatch('contacts',`id=eq.${id}`,body);}
+    else{await sbPost('contacts',body);}
+    await reloadContactsOnly();
+  }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
+
+function askDeleteContact(id){
+  deleteContactId=id;
+  const c=contacts.find(x=>x.id===id);
+  document.getElementById('modal-delete-contact-msg').textContent=`Supprimer ${c.prenom||''} ${c.nom||''} (${c.email||c.societe||'contact sans email'}) ?`;
+  document.getElementById('modal-delete-contact').classList.add('open');
+}
+async function confirmDeleteContact(){
+  const id=deleteContactId;
+  closeModal('modal-delete-contact');
+  showLoader('Suppression…');
+  try{await sbDelete('contacts',`id=eq.${id}`);await reloadContactsOnly();}
+  catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
+
+async function reloadContactsOnly(){
+  showLoader('Actualisation des contacts…');
+  try{
+    contacts=await fetchAllContacts();
+  }catch(e){console.error(e);}
+  hideLoader();
+  renderContacts();
+  renderQualite();
+}
+
+// ── QUALITÉ ───────────────────────────────────────────────────
+function resetMultiSelect(id){
+  const el=document.getElementById(id);
+  if(el)[...el.options].forEach(o=>o.selected=false);
+}
+
+function renderQualite(){
+  const checks=[
+    {key:'email',label:'Sans email',fn:c=>!c.email},
+    {key:'telephone',label:'Sans téléphone',fn:c=>!c.telephone},
+    {key:'societe',label:'Sans société',fn:c=>!c.societe},
+    {key:'region',label:'Sans région',fn:c=>!c.region},
+    {key:'type_contact',label:'Sans type',fn:c=>!c.type_contact},
+    {key:'url_linkedin',label:'Sans LinkedIn',fn:c=>!c.url_linkedin},
+    {key:'desabonne',label:'Désabonnés',fn:c=>c.desabonne},
+    {key:'email_invalide',label:'Email invalide',fn:c=>c.email_invalide},
+  ];
+  const kpiEl=document.getElementById('qualite-kpi');
+  if(!kpiEl)return;
+  kpiEl.innerHTML=checks.map(ch=>`
+    <div class="qualite-kpi-card${qualiteFilter===ch.key?' active':''}" onclick="setQualiteFilter('${ch.key}')">
+      <div class="q-label">${ch.label}</div>
+      <div class="q-val">${contacts.filter(ch.fn).length.toLocaleString('fr-FR')}</div>
+    </div>`).join('');
+
+  const filterEl=document.getElementById('qualite-filter-label');
+  const tbody=document.getElementById('qualite-tbody');
+  const exportBtn=document.getElementById('btn-export-qualite');
+  if(!qualiteFilter){
+    filterEl.textContent='Cliquez sur un indicateur pour filtrer les contacts concernés';
+    tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">🔍</div>Sélectionnez un indicateur ci-dessus</div></td></tr>`;
+    if(exportBtn)exportBtn.style.display='none';
+    return;
+  }
+  const ch=checks.find(c=>c.key===qualiteFilter);
+  const list=contacts.filter(ch.fn);
+  filterEl.textContent=`${list.length} contact(s) — ${ch.label}`;
+  if(exportBtn)exportBtn.style.display=list.length?'':'none';
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="9"><div class="empty"><div class="empty-icon">✓</div>Aucun contact concerné</div></td></tr>`;return;}
+  tbody.innerHTML=list.slice(0,200).map(c=>{
+    const manquants=[];
+    if(!c.email)manquants.push('Email');
+    if(!c.telephone)manquants.push('Tél.');
+    if(!c.societe)manquants.push('Société');
+    if(!c.region)manquants.push('Région');
+    if(!c.type_contact)manquants.push('Type');
+    return`<tr>
+      <td>${esc(c.nom||'—')}</td><td>${esc(c.prenom||'')}</td>
+      <td>${esc(c.societe||'')}</td>
+      <td style="font-size:12px;">${c.email?esc(c.email):'<span class="badge-invalide">manquant</span>'}</td>
+      <td>${esc(c.telephone||'')}</td><td>${esc(c.region||'')}</td>
+      <td><span class="tag type" style="font-size:10px;">${esc(c.type_contact||'—')}</span></td>
+      <td style="font-size:11px;">${manquants.map(m=>`<span class="badge-invalide">${m}</span>`).join(' ')}</td>
+      <td><button class="btn btn-edit btn-sm" onclick="openContactModal('${c.id}')">Modifier</button></td>
+    </tr>`;
+  }).join('');
+}
+function setQualiteFilter(key){
+  qualiteFilter=qualiteFilter===key?null:key;
+  renderQualite();
+}
+
+function exportQualite(){
+  if(!qualiteFilter){alert('Sélectionnez d\'abord un indicateur.');return;}
+  const checks=[
+    {key:'email',label:'Sans email',fn:c=>!c.email},
+    {key:'telephone',label:'Sans téléphone',fn:c=>!c.telephone},
+    {key:'societe',label:'Sans société',fn:c=>!c.societe},
+    {key:'region',label:'Sans région',fn:c=>!c.region},
+    {key:'type_contact',label:'Sans type',fn:c=>!c.type_contact},
+    {key:'url_linkedin',label:'Sans LinkedIn',fn:c=>!c.url_linkedin},
+    {key:'desabonne',label:'Désabonnés',fn:c=>c.desabonne},
+    {key:'email_invalide',label:'Email invalide',fn:c=>c.email_invalide},
+  ];
+  const ch=checks.find(c=>c.key===qualiteFilter);
+  if(!ch)return;
+  const list=contacts.filter(ch.fn);
+  if(!list.length){alert('Aucun contact à exporter.');return;}
+  const headers=['Type','Nom','Prénom','Genre','Titre','Email','Téléphone','Société','Site internet','URL LinkedIn','Adresse 1','Adresse 2','Adresse 3','Code postal','Ville','Pays','Région','Source','Désabonné','Email invalide'];
+  const rows=list.map(c=>[
+    c.type_contact||'',c.nom||'',c.prenom||'',c.genre||'',c.titre||'',c.email||'',
+    c.telephone||'',c.societe||'',c.site_internet||'',c.url_linkedin||'',
+    c.adresse1||'',c.adresse2||'',c.adresse3||'',c.code_postal||'',c.ville||'',c.pays||'',
+    c.region||'',c.source_contact||'',c.desabonne?'Oui':'Non',c.email_invalide?'Oui':'Non'
+  ]);
+  const csv='\uFEFF'+[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`eclid_qualite_${ch.key}_${today().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+// ── EXTRACTION ────────────────────────────────────────────────
+function getExtractFiltered(){
+  const nom=(document.getElementById('ex-nom')?.value||'').toLowerCase();
+  const prenom=(document.getElementById('ex-prenom')?.value||'').toLowerCase();
+  const type=document.getElementById('ex-type')?.value||'';
+  const titre=(document.getElementById('ex-titre')?.value||'').toLowerCase();
+  const region=document.getElementById('ex-region')?.value||'';
+  const societe=(document.getElementById('ex-societe')?.value||'').toLowerCase();
+  const source=document.getElementById('ex-source')?.value||'';
+  const invalide=document.getElementById('ex-invalide')?.value||'';
+  const desabo=document.getElementById('ex-desabonne')?.value||'';
+  return contacts.filter(c=>{
+    if(nom&&!(c.nom||'').toLowerCase().includes(nom))return false;
+    if(prenom&&!(c.prenom||'').toLowerCase().includes(prenom))return false;
+    if(type&&c.type_contact!==type)return false;
+    if(titre&&!(c.titre||'').toLowerCase().includes(titre))return false;
+    if(region&&c.region!==region)return false;
+    if(societe&&!(c.societe||'').toLowerCase().includes(societe))return false;
+    if(source&&c.source_contact!==source)return false;
+    if(invalide==='oui'&&!c.email_invalide)return false;
+    if(invalide==='non'&&c.email_invalide)return false;
+    if(desabo==='oui'&&!c.desabonne)return false;
+    if(desabo==='non'&&c.desabonne)return false;
+    return true;
+  });
+}
+function previewExtraction(){
+  const list=getExtractFiltered();
+  document.getElementById('extract-count').textContent=`${list.length.toLocaleString('fr-FR')} contact(s) trouvé(s)`;
+  const prev=document.getElementById('extract-preview');
+  prev.style.display='block';
+  const tbody=document.getElementById('extract-tbody');
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty">Aucun résultat</div></td></tr>`;return;}
+  tbody.innerHTML=list.slice(0,50).map(c=>`<tr>
+    <td>${esc(c.nom||'')}</td><td>${esc(c.prenom||'')}</td><td>${esc(c.genre||'')}</td>
+    <td style="font-size:12px;">${esc(c.titre||'')}</td><td style="font-size:12px;">${esc(c.email||'')}</td>
+    <td>${esc(c.societe||'')}</td><td>${esc(c.region||'')}</td>
+    <td><span class="tag type" style="font-size:10px;">${esc(c.type_contact||'')}</span></td>
+    <td style="font-size:11px;">${esc(c.source_contact||'')}</td><td>${esc(c.telephone||'')}</td>
+  </tr>`).join('');
+}
+function exportContacts(){
+  const list=getExtractFiltered();
+  if(!list.length){alert('Aucun contact à exporter.');return;}
+  const headers=['Type','Nom','Prénom','Genre','Titre','Email','Téléphone','Société','Site internet','URL LinkedIn','Adresse 1','Adresse 2','Adresse 3','Code postal','Ville','Pays','Région','Source','Désabonné','Email invalide'];
+  const rows=list.map(c=>[
+    c.type_contact||'',c.nom||'',c.prenom||'',c.genre||'',c.titre||'',c.email||'',
+    c.telephone||'',c.societe||'',c.site_internet||'',c.url_linkedin||'',
+    c.adresse1||'',c.adresse2||'',c.adresse3||'',c.code_postal||'',c.ville||'',c.pays||'',
+    c.region||'',c.source_contact||'',c.desabonne?'Oui':'Non',c.email_invalide?'Oui':'Non'
+  ]);
+  const csv='\uFEFF'+[headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`eclid_contacts_${today().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+// ── IMPORT FICHIER ────────────────────────────────────────────
+function handleImportDrop(e){
+  e.preventDefault();
+  document.getElementById('import-drop-zone').classList.remove('drag-over');
+  const f=e.dataTransfer.files[0];
+  if(f)handleImportFile(f);
+}
+
+async function handleImportFile(file){
+  if(!file)return;
+  document.getElementById('import-step1-status').textContent='Lecture du fichier…';
+  try{
+    const data=await readFileAsBuffer(file);
+    const XLSX=await loadXLSX();
+    const wb=XLSX.read(data,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+    importData=rows;
+    document.getElementById('import-step1-status').textContent=`${rows.length} lignes lues — ${wb.SheetNames[0]}`;
+    buildMappingTable(rows);
+    importGoStep(2);
+  }catch(e){document.getElementById('import-step1-status').textContent='Erreur : '+e.message;}
+}
+
+function readFileAsBuffer(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(new Uint8Array(e.target.result));
+    r.onerror=rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+
+function loadXLSX(){
+  return new Promise((res,rej)=>{
+    if(window.XLSX){res(window.XLSX);return;}
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=()=>res(window.XLSX);s.onerror=rej;
+    document.head.appendChild(s);
+  });
+}
+
+function buildMappingTable(rows){
+  if(!rows.length)return;
+  const cols=Object.keys(rows[0]);
+  const saved=getSavedMapping();
+  // Table de correspondance par défaut (mapping connu)
+  const defaults={
+    'firstName':'prenom','lastName':'nom','gender_emelia':'genre',
+    'title':'titre','email_emelia':'email','linkedinUrlProfile':'url_linkedin',
+    'Unnamed: 6':'adresse1','Unnamed: 7':'code_postal','company':'societe',
+    'companyWebsite':'site_internet','Région':'region','Source':'source_contact',
+    'Base':'type_contact','Mails en erreur':'email_invalide',
+  };
+  const el=document.getElementById('mapping-table-el');
+  el.innerHTML=`<tr><th>Colonne fichier</th><th>Exemple valeur</th><th>→ Champ base contacts</th></tr>`+
+    cols.map(col=>{
+      const ex=rows.slice(0,3).map(r=>r[col]).filter(v=>v!=='').join(' / ');
+      const def=saved[col]||defaults[col]||'IGNORE';
+      return`<tr>
+        <td><strong>${esc(col)}</strong></td>
+        <td style="font-size:11px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;">${esc(String(ex).slice(0,80))}</td>
+        <td><select data-col="${esc(col)}">
+          ${CONTACT_FIELDS.map(f=>`<option value="${f.key}"${f.key===def?' selected':''}>${f.label}</option>`).join('')}
+        </select></td>
+      </tr>`;
+    }).join('');
+}
+
+function importGoStep(n){
+  document.querySelectorAll('.import-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('import-step-'+n).classList.add('active');
+}
+
+async function importAnalyse(){
+  // Lire mapping
+  const mapping={};
+  document.querySelectorAll('#mapping-table-el select').forEach(sel=>{
+    if(sel.value!=='IGNORE')mapping[sel.dataset.col]=sel.value;
+  });
+  saveMapping(mapping);
+
+  // Transformer les données
+  importMapped=importData.map(row=>{
+    const c={};
+    for(const[col,field]of Object.entries(mapping)){
+      let v=row[col];
+      if(v===''||v===null||v===undefined)v=null;
+      if(field==='email_invalide'){c[field]=!!v&&v!=='0'&&v!==0;}
+      else if(field==='desabonne'){c[field]=!!v;}
+      else{c[field]=v!=null?String(v).trim()||null:null;}
+    }
+    c.updated_at=new Date().toISOString();
+    return c;
+  }).filter(c=>c.nom||c.email||c.prenom);
+
+  // Détecter doublons
+  const emailSet={};const nameSet={};
+  contacts.forEach(c=>{
+    if(c.email)emailSet[c.email.toLowerCase()]=c;
+    if(c.nom&&c.prenom&&c.societe)nameSet[`${c.nom}|${c.prenom}|${c.societe}`.toLowerCase()]=c;
+  });
+  importDoublons=[];importNouveaux=[];
+  for(const row of importMapped){
+    const byEmail=row.email?emailSet[row.email.toLowerCase()]:null;
+    const byName=(row.nom&&row.prenom&&row.societe)?nameSet[`${row.nom}|${row.prenom}|${row.societe}`.toLowerCase()]:null;
+    const existing=byEmail||byName;
+    if(existing){importDoublons.push({row,existing,raison:byEmail?'email':'nom+prénom+société'});}
+    else{importNouveaux.push(row);}
+  }
+
+  // Afficher résumé étape 3
+  let html=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;">
+    <div class="kpi-card green"><div class="kpi-label">Nouveaux contacts</div><div class="kpi-value text-green">${importNouveaux.length}</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">Doublons détectés</div><div class="kpi-value" style="color:var(--orange);">${importDoublons.length}</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">Total importé</div><div class="kpi-value">${importMapped.length}</div></div>
+  </div>`;
+
+  if(importDoublons.length){
+    html+=`<h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Doublons — vérifiez et choisissez l'action</h3>`;
+    html+=importDoublons.slice(0,50).map((d,i)=>`
+      <div class="dupli-card">
+        <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:8px;">Doublon #${i+1} — détecté par ${d.raison}</div>
+        <div class="dupli-row">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;">EXISTANT EN BASE</div>
+            <div style="font-size:12px;">${esc((d.existing.prenom||'')+' '+(d.existing.nom||''))}</div>
+            <div style="font-size:11px;color:var(--muted);">${esc(d.existing.email||'')} · ${esc(d.existing.societe||'')}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;">DANS LE FICHIER</div>
+            <div style="font-size:12px;">${esc((d.row.prenom||'')+' '+(d.row.nom||''))}</div>
+            <div style="font-size:11px;color:var(--muted);">${esc(d.row.email||'')} · ${esc(d.row.societe||'')}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="radio" name="dupli_${i}" value="ignore" checked> Ignorer
+            </label>
+            <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="radio" name="dupli_${i}" value="update"> Mettre à jour
+            </label>
+            <label style="font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="radio" name="dupli_${i}" value="add"> Ajouter quand même
+            </label>
+          </div>
+        </div>
+      </div>`).join('');
+    if(importDoublons.length>50)html+=`<div style="color:var(--muted);font-size:12px;margin-bottom:12px;">… et ${importDoublons.length-50} autres doublons (action par défaut : Ignorer)</div>`;
+  }
+  document.getElementById('import-step3-content').innerHTML=html;
+  importGoStep(3);
+}
+
+async function confirmImport(){
+  showLoader('Import en cours…');
+  document.getElementById('import-progress').style.display='block';
+  const prog=document.getElementById('import-progress-fill');
+  const status=document.getElementById('import-step3-status');
+
+  // Collecter décisions doublons
+  const toInsert=[...importNouveaux];
+  const toUpdate=[];
+  importDoublons.forEach((d,i)=>{
+    const sel=document.querySelector(`input[name="dupli_${i}"]:checked`);
+    const action=sel?sel.value:'ignore';
+    if(action==='update')toUpdate.push({id:d.existing.id,data:d.row});
+    else if(action==='add')toInsert.push(d.row);
+  });
+
+  let done=0;const total=toInsert.length+toUpdate.length;
+  const BATCH=50;
+  try{
+    // Insertions par batch
+    for(let i=0;i<toInsert.length;i+=BATCH){
+      const batch=toInsert.slice(i,i+BATCH);
+      await sbPost('contacts',batch);
+      done+=batch.length;
+      prog.style.width=`${Math.round(done/Math.max(total,1)*100)}%`;
+      status.textContent=`Importé ${done.toLocaleString('fr-FR')} / ${total.toLocaleString('fr-FR')}…`;
+    }
+    // Mises à jour
+    for(const u of toUpdate){
+      await sbPatch('contacts',`id=eq.${u.id}`,{...u.data,updated_at:new Date().toISOString()});
+      done++;prog.style.width=`${Math.round(done/Math.max(total,1)*100)}%`;
+    }
+    status.textContent=`✓ ${toInsert.length} contact(s) ajouté(s), ${toUpdate.length} mis à jour.`;
+    await reloadContactsOnly();
+    importGoStep(1);
+  }catch(e){status.textContent='Erreur : '+e.message;}
+  finally{hideLoader();}
+}
+
+// ── MAILS ERRONÉS ─────────────────────────────────────────────
+async function handleImportMailsErreurs(file){
+  if(!file)return;
+  showLoader('Lecture…');
+  try{
+    const data=await readFileAsBuffer(file);
+    const XLSX=await loadXLSX();
+    const wb=XLSX.read(data,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    // Chercher une colonne email (1ère colonne ou colonne nommée email)
+    const emails=[...new Set(rows.flat().map(v=>String(v).trim().toLowerCase()).filter(v=>v.includes('@')))];
+    // Chercher correspondances
+    const matches=[];
+    emails.forEach(email=>{
+      const c=contacts.find(x=>x.email&&x.email.toLowerCase()===email);
+      matches.push({email,contact:c||null});
+    });
+    hideLoader();
+    document.getElementById('erreurs-subtitle').textContent=`${emails.length} emails importés — ${matches.filter(m=>m.contact).length} contacts trouvés`;
+    document.getElementById('erreurs-tbody').innerHTML=matches.map((m,i)=>`<tr>
+      <td style="font-size:12px;">${esc(m.email)}</td>
+      <td>${m.contact?`${esc(m.contact.prenom||'')} ${esc(m.contact.nom||'')} — ${esc(m.contact.societe||'')}`:' <span style="color:var(--muted);">Non trouvé</span>'}</td>
+      <td>${m.contact?`<input type="checkbox" data-id="${m.contact.id}" data-email="${esc(m.email)}" checked style="width:auto;">`:''}</td>
+    </tr>`).join('');
+    document.getElementById('modal-mails-erreurs').classList.add('open');
+  }catch(e){hideLoader();alert('Erreur : '+e.message);}
+}
+
+async function confirmMailsErreurs(){
+  const checks=document.querySelectorAll('#erreurs-tbody input[type=checkbox]:checked');
+  closeModal('modal-mails-erreurs');
+  showLoader('Mise à jour…');
+  try{
+    for(const cb of checks){
+      await sbPatch('contacts',`id=eq.${cb.dataset.id}`,{email_invalide:true,updated_at:new Date().toISOString()});
+    }
+    await reloadContactsOnly();
+  }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
+
+// ── DÉSABONNEMENTS ────────────────────────────────────────────
+async function handleImportDesabonnements(file){
+  if(!file)return;
+  showLoader('Traitement des désabonnements…');
+  try{
+    const data=await readFileAsBuffer(file);
+    const XLSX=await loadXLSX();
+    const wb=XLSX.read(data,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+    const emails=[...new Set(rows.flat().map(v=>String(v).trim().toLowerCase()).filter(v=>v.includes('@')))];
+    let updated=0;
+    for(const email of emails){
+      const c=contacts.find(x=>x.email&&x.email.toLowerCase()===email);
+      if(c&&!c.desabonne){
+        await sbPatch('contacts',`id=eq.${c.id}`,{desabonne:true,updated_at:new Date().toISOString()});
+        updated++;
+      }
+    }
+    await reloadContactsOnly();
+    alert(`${updated} contact(s) marqué(s) comme désabonnés sur ${emails.length} emails importés.`);
+  }catch(e){setSyncStatus('error','✗ Erreur');alert('Erreur : '+e.message);hideLoader();}
+}
+
+// ════════════════════════════════════════════════════════════════
 // NAVIGATION & MODALES
 // ════════════════════════════════════════════════════════════════
 function showScreen(id,btn){
@@ -2806,7 +3828,11 @@ function showScreen(id,btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+id).classList.add('active');
   btn.classList.add('active');
-  renderAll();
+  if(id==='contacts'){contactsPage=0;renderContacts();}
+  else if(id==='contacts-qualite'){renderQualite();}
+  else if(id==='contacts-extract'){populateContactSelects();}
+  else if(id==='contacts-import'){importGoStep(1);}
+  else renderAll();
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');deleteTarget=null;editTarget=null;prospectEditId=null;deleteProspectTarget=null;deleteTodoTarget=null;editTodoId=null;}
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
