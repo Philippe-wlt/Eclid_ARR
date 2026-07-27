@@ -3683,6 +3683,13 @@ async function importAnalyse(){
 
   if(importDoublons.length){
     html+=`<h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">Doublons — vérifiez et choisissez l'action</h3>`;
+    // Sélecteur global
+    html+=`<div style="background:rgba(47,109,224,.06);border:1px solid rgba(47,109,224,.15);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <span style="font-size:13px;font-weight:600;">Appliquer à tous les doublons :</span>
+      <button class="btn btn-secondary btn-sm" onclick="setAllDupliAction('ignore')">Ignorer tous</button>
+      <button class="btn btn-edit btn-sm" onclick="setAllDupliAction('update')">Mettre à jour tous</button>
+      <button class="btn btn-primary btn-sm" onclick="setAllDupliAction('add')">Ajouter tous quand même</button>
+    </div>`;
     html+=importDoublons.slice(0,50).map((d,i)=>`
       <div class="dupli-card">
         <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:8px;">Doublon #${i+1} — détecté par ${d.raison}</div>
@@ -3714,6 +3721,13 @@ async function importAnalyse(){
   }
   document.getElementById('import-step3-content').innerHTML=html;
   importGoStep(3);
+}
+
+function setAllDupliAction(action){
+  importDoublons.forEach((_,i)=>{
+    const radio=document.querySelector(`input[name="dupli_${i}"][value="${action}"]`);
+    if(radio)radio.checked=true;
+  });
 }
 
 async function confirmImport(){
