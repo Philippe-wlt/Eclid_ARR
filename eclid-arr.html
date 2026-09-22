@@ -306,7 +306,10 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
 <div class="screen" id="screen-prospects">
   <div class="section-header">
     <h2 class="section-title" style="margin-bottom:0;">Pipe commercial</h2>
-    <button class="btn btn-primary" onclick="openProspectModal()">＋ Nouveau prospect</button>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary" style="font-size:12px;" onclick="exportProspectsCSV()">⬇ Exporter CSV</button>
+      <button class="btn btn-primary" onclick="openProspectModal()">＋ Nouveau prospect</button>
+    </div>
   </div>
 
   <!-- ANALYSE PAR ÉTAPE -->
@@ -2771,6 +2774,61 @@ function calClickDay(dateStr){
     calMonth=d.getMonth();
   }
   renderTodos(); // re-render filtre + calendrier
+}
+
+function exportProspectsCSV(){
+  // Utilise la liste filtrée visible (mêmes filtres que l'affichage)
+  const etapeF=document.getElementById('filter-etape').value;
+  const typeF=document.getElementById('filter-type').value;
+  const evenementF=document.getElementById('filter-evenement').value;
+  const fermeF=document.getElementById('filter-ferme').value;
+  const search=document.getElementById('filter-search').value.toLowerCase();
+
+  const list=prospects.filter(p=>{
+    const hasRealEtape=p.etape&&p.etape.trim()!=='—'&&p.etape.trim()!=='';
+    if(!hasRealEtape&&!p.ferme_perdu)return false;
+    if(fermeF==='actif'&&p.ferme_perdu)return false;
+    if(fermeF==='ferme'&&!p.ferme_perdu)return false;
+    if(etapeF&&p.etape!==etapeF)return false;
+    if(typeF&&p.type_entreprise!==typeF)return false;
+    if(evenementF&&(p.evenement||'').trim().toLowerCase()!==evenementF.trim().toLowerCase())return false;
+    if(search&&!`${p.nom||''} ${p.prenom||''} ${p.societe||''} ${p.email||''}`.toLowerCase().includes(search))return false;
+    return true;
+  });
+
+  if(!list.length){alert('Aucun prospect à exporter avec les filtres actuels.');return;}
+
+  const headers=[
+    'Société','Nom','Prénom','Genre','Email','Téléphone','Poste','Effectif',
+    'Type entreprise','Source du pipe','Événement','Étape','Taux réussite (%)',
+    'Licences potentielles','ARR potentiel (€)','Date de closing',
+    'Décideur - Nom','Décideur - Prénom','Décideur - Fonction','Décideur - Email','Décideur - Tél',
+    'Adresse 1','Adresse 2','Code postal','Ville','Pays','Site internet','URL LinkedIn',
+    'Commentaire','Fermé/Perdu','Motif de perte',
+  ];
+
+  const rows=list.map(p=>{
+    const taux=getEtapeTaux(p.etape);
+    return[
+      p.societe||'',p.nom||'',p.prenom||'',p.genre||'',p.email||'',p.telephone||'',
+      p.poste||'',p.effectif||'',p.type_entreprise||'',p.source_pipe||'',p.evenement||'',
+      p.etape||'',Math.round(taux*100),
+      p.potentiel_licences||'',p.potentiel_arr||'',p.closing_date||'',
+      p.decideur_nom||'',p.decideur_prenom||'',p.decideur_fonction||'',p.decideur_email||'',p.decideur_tel||'',
+      p.adresse1||'',p.adresse2||'',p.code_postal||'',p.ville||'',p.pays||'',
+      p.site_internet||'',p.url_linkedin||'',
+      p.commentaire||'',p.ferme_perdu?'Oui':'Non',p.motif_perte||'',
+    ];
+  });
+
+  const csv='\uFEFF'+[headers,...rows]
+    .map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';'))
+    .join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`eclid_prospects_${today().toISOString().slice(0,10)}.csv`;
+  a.click();URL.revokeObjectURL(a.href);
 }
 
 function prospectTodoCount(prospectId){
