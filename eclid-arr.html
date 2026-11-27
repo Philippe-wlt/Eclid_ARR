@@ -319,6 +319,7 @@ tbody td{padding:11px 14px;font-size:13px;color:var(--text);}
     <select id="filter-etape" onchange="renderProspects()"><option value="">Toutes les étapes</option></select>
     <select id="filter-type" onchange="renderProspects()"><option value="">Tous les types</option></select>
     <select id="filter-evenement" onchange="renderProspects()"><option value="">Tous les événements</option></select>
+    <select id="filter-source" onchange="renderProspects()"><option value="">Toutes les sources</option></select>
     <select id="filter-ferme" onchange="renderProspects()">
       <option value="actif">Actifs uniquement</option>
       <option value="tous">Tous (incl. fermés/perdus)</option>
@@ -1526,6 +1527,7 @@ function renderProspects(){
   const etapeF=document.getElementById('filter-etape').value;
   const typeF=document.getElementById('filter-type').value;
   const evenementF=document.getElementById('filter-evenement').value;
+  const sourceF=document.getElementById('filter-source').value;
   const fermeF=document.getElementById('filter-ferme').value;
   const search=document.getElementById('filter-search').value.toLowerCase();
 
@@ -1544,6 +1546,14 @@ function renderProspects(){
   fev.innerHTML='<option value="">Tous les événements</option>'+allEvents.map(ev=>`<option value="${esc(ev)}"${ev===curEv?' selected':''}>${esc(ev)}</option>`).join('');
   // Restaurer la valeur sélectionnée après reconstruction
   if(curEv)fev.value=curEv;
+  // Filtre source du contact (source du pipe)
+  const fso=document.getElementById('filter-source');
+  const curSo=fso.value;
+  const srcRaw=prospects.map(p=>(p.source_pipe||'').trim()).filter(v=>v&&v!=='\u2014');
+  const srcList=[...new Set(srcRaw)].sort();
+  if(curSo&&!srcList.includes(curSo))srcList.unshift(curSo);
+  fso.innerHTML='<option value="">Toutes les sources</option>'+srcList.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+  fso.value=curSo;
 
   // CARTES PAR ÉTAPE
   const ap=activeProspects();
@@ -1581,6 +1591,7 @@ function renderProspects(){
     if(etapeF&&p.etape!==etapeF)return false;
     if(typeF&&p.type_entreprise!==typeF)return false;
     if(evenementF&&(p.evenement||'').trim().toLowerCase()!==(evenementF).trim().toLowerCase())return false;
+    if(sourceF&&(p.source_pipe||'').trim()!==sourceF)return false;
     if(search&&!`${p.nom} ${p.prenom} ${p.societe} ${p.email}`.toLowerCase().includes(search))return false;
     return true;
   });
